@@ -1,5 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as PieTooltip, Legend, BarChart, Bar, XAxis, YAxis, Tooltip as BarTooltip, CartesianGrid } from 'recharts';
+import html2canvas from 'html2canvas';
+
+// オートセーブ用のカスタムフック
+function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => void] {
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.error(error);
+      return initialValue;
+    }
+  });
+
+  const setValue = (value: T) => {
+    try {
+      setStoredValue(value);
+      window.localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  return [storedValue, setValue];
+}
 
 type DogBreed = {
   id: string;
@@ -362,31 +387,46 @@ const PREVENTION_COST = {
   '大型犬': 45000,
 };
 
-export default function App() {
-  const [selectedBreedId, setSelectedBreedId] = useState<string>(DOG_BREEDS[0].id);
-  const [hasInsurance, setHasInsurance] = useState<boolean>(true);
-  const [trimmingFrequency, setTrimmingFrequency] = useState<number>(12);
+function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBreedId: string }) {
+  // useLocalStorageを用いて状態を保存・復元
+  const [selectedBreedId, setSelectedBreedId] = useLocalStorage<string>(`selectedBreedId_${idSuffix}`, defaultBreedId);
+  const [hasInsurance, setHasInsurance] = useLocalStorage<boolean>(`hasInsurance_${idSuffix}`, true);
+  const [trimmingFrequency, setTrimmingFrequency] = useLocalStorage<number>(`trimmingFrequency_${idSuffix}`, 12);
 
-  // 絞り込み・検索用の状態
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string>('all');
 
-  // カスタムモード用の状態
-  const [customPrice, setCustomPrice] = useState<number>(0);
-  const [customLifespan, setCustomLifespan] = useState<number>(14);
-  const [customSize, setCustomSize] = useState<'小型犬' | '中型犬' | '大型犬'>('小型犬');
+  const [customPrice, setCustomPrice] = useLocalStorage<number>(`customPrice_${idSuffix}`, 0);
+  const [customLifespan, setCustomLifespan] = useLocalStorage<number>(`customLifespan_${idSuffix}`, 14);
+  const [customSize, setCustomSize] = useLocalStorage<'小型犬' | '中型犬' | '大型犬'>(`customSize_${idSuffix}`, '小型犬');
 
-  // 飼育オプション状態
-  const [starterSetCost, setStarterSetCost] = useState<number>(50000); // 初期スターターセット（ケージ等）
-  const [snackCost, setSnackCost] = useState<number>(3000); // 月額おやつ・サプリ代
-  const [hotelCost, setHotelCost] = useState<number>(0); // 年間ホテル・ドッグラン代
-  const [trainingCost, setTrainingCost] = useState<number>(0); // 初期しつけ教室代
-  const [toiletSheetCost, setToiletSheetCost] = useState<number>(1500); // 月額トイレシート代
-  const [acCost, setAcCost] = useState<number>(3000); // 月額の冷暖房費（エアコン追加分）
-  const [hasSpayNeuter, setHasSpayNeuter] = useState<boolean>(true); // 去勢・避妊手術（初期）
-  const [hasAnnualCheckup, setHasAnnualCheckup] = useState<boolean>(false); // 年次定期健診・ペットドック
+  const [starterSetCost, setStarterSetCost] = useLocalStorage<number>(`starterSetCost_${idSuffix}`, 50000);
+  const [snackCost, setSnackCost] = useLocalStorage<number>(`snackCost_${idSuffix}`, 3000);
+  const [hotelCost, setHotelCost] = useLocalStorage<number>(`hotelCost_${idSuffix}`, 0);
+  const [trainingCost, setTrainingCost] = useLocalStorage<number>(`trainingCost_${idSuffix}`, 0);
+  const [toiletSheetCost, setToiletSheetCost] = useLocalStorage<number>(`toiletSheetCost_${idSuffix}`, 1500);
+  const [acCost, setAcCost] = useLocalStorage<number>(`acCost_${idSuffix}`, 3000);
+  const [hasSpayNeuter, setHasSpayNeuter] = useLocalStorage<boolean>(`hasSpayNeuter_${idSuffix}`, true);
+  const [hasAnnualCheckup, setHasAnnualCheckup] = useLocalStorage<boolean>(`hasAnnualCheckup_${idSuffix}`, false);
 
-  const breed = DOG_BREEDS.find((b) => b.id === selectedBreedId) || DOG_BREEDS[0];
+  const resultRef = useRef<HTMLElement>(null);
+
+  const handleDownloadImage = async () => {
+    if (!resultRef.current) return;
+    try {
+      const canvas = await html2canvas(resultRef.current, { scale: 2, useCORS: true, backgroundColor: '#fff7ed' });
+      const image = canvas.toDataURL("image/png", 1.0);
+      const link = document.createElement('a');
+      link.download = `petsim-result-${breed.id}.png`;
+      link.href = image;
+      link.click();
+    } catch (e) {
+      console.error("画像保存に失敗しました", e);
+      alert("画像の保存に失敗しました。");
+    }
+  };
+
+  const breed = DOG_BREEDS.find((b) => b.id === selectedBreedId) || DOG_BREEDS.find((b) => b.id === defaultBreedId) || DOG_BREEDS[0];
   const isCustom = breed.id === 'custom-mix';
 
   // カスタムモード時の値の上書き
@@ -457,15 +497,8 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen bg-orange-50 flex flex-col items-center font-sans text-gray-800">
-      <header className="w-full bg-gradient-to-r from-orange-400 to-pink-400 text-white p-5 shadow-md text-center rounded-b-3xl">
-        <h1 className="text-2xl font-extrabold tracking-wide drop-shadow-md">🐶 ワンコお迎えコスト計算機 🐾</h1>
-        <p className="text-xs font-medium mt-1 opacity-90">〜うちの子にどれくらいかかる？〜</p>
-      </header>
-
-      <main className="flex-1 w-full max-w-lg p-4 flex flex-col gap-6 mt-2">
-
-        {/* Step 1: Breed Selection */}
+    <div className="w-full flex flex-col gap-6">
+      {/* Step 1: Breed Selection */}
         <section className="bg-white p-5 rounded-3xl shadow-sm border-2 border-orange-100">
           <h2 className="text-lg font-bold mb-3 flex items-center gap-2 text-orange-600">
             <span className="text-2xl">🔍</span> 1. 犬種をえらぶ
@@ -814,8 +847,8 @@ export default function App() {
         </section>
 
         {/* Step 3: Result */}
-        <section className="bg-gradient-to-b from-white to-orange-50 p-6 rounded-3xl shadow-lg border-4 border-orange-300 flex flex-col gap-4 relative overflow-hidden">
-          <div className="absolute -top-10 -right-10 text-9xl opacity-5 transform rotate-12">💰</div>
+        <section ref={resultRef} className="bg-gradient-to-b from-white to-orange-50 p-6 rounded-3xl shadow-lg border-4 border-orange-300 flex flex-col gap-4 relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 text-9xl opacity-5 transform rotate-12" data-html2canvas-ignore>💰</div>
           <div className="relative z-10">
             <h2 className="text-center text-sm font-extrabold text-orange-600 mb-2 bg-orange-100 inline-block px-4 py-1 rounded-full mx-auto block w-fit">
               ✨ 概算生涯費用（推定寿命: {activeLifespan}年） ✨
@@ -895,22 +928,71 @@ export default function App() {
             ※シニア期は医療・保険カテゴリの費用が1.5倍になる想定で計算しています。
           </p>
 
-          {/* SNS Share Button */}
-          <div className="mt-5 flex justify-center relative z-10">
+          {/* アクションボタン群 */}
+          <div className="mt-5 flex flex-col sm:flex-row justify-center gap-3 relative z-10" data-html2canvas-ignore>
+            <button
+              onClick={handleDownloadImage}
+              className="bg-orange-500 text-white text-sm font-extrabold py-3 px-6 rounded-full flex items-center justify-center gap-2 hover:bg-orange-600 transition-transform active:scale-95 shadow-md flex-1"
+            >
+              <span>📸</span>
+              画像を保存
+            </button>
             <a
               href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`私のワンコ(${breed.name})お迎え概算生涯費用は ${new Intl.NumberFormat('ja-JP').format(lifetimeCost)}円 でした！🐶🐾\n\n#PetSim #ワンコお迎えコスト計算機\n`)}&url=${encodeURIComponent('https://BambaSpace.github.io/PetSim/')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-gray-900 text-white text-sm font-extrabold py-3 px-8 rounded-full flex items-center gap-2 hover:bg-gray-800 transition-transform active:scale-95 shadow-lg"
+              className="bg-gray-900 text-white text-sm font-extrabold py-3 px-6 rounded-full flex items-center justify-center gap-2 hover:bg-gray-800 transition-transform active:scale-95 shadow-md flex-1"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true" className="w-4 h-4 fill-current"><g><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.92H5.078z"></path></g></svg>
-              X (Twitter) で結果をシェアする
+              ポスト
             </a>
           </div>
         </section>
+    </div>
+  );
+}
 
-        {/* アフィリエイト（マネタイズ）エリア */}
-        <section className="flex flex-col gap-4 mt-2">
+export default function App() {
+  const [isCompareMode, setIsCompareMode] = useLocalStorage<boolean>('isCompareMode', false);
+
+  return (
+    <div className="min-h-screen bg-orange-50 flex flex-col items-center font-sans text-gray-800">
+      <header className="w-full bg-gradient-to-r from-orange-400 to-pink-400 text-white p-5 shadow-md text-center rounded-b-3xl sticky top-0 z-50">
+        <h1 className="text-2xl font-extrabold tracking-wide drop-shadow-md">🐶 ワンコお迎えコスト計算機 🐾</h1>
+        <p className="text-xs font-medium mt-1 opacity-90">〜うちの子にどれくらいかかる？〜</p>
+      </header>
+
+      <div className="w-full max-w-4xl p-4 mt-2 flex justify-end">
+        <label className="flex items-center cursor-pointer bg-white px-4 py-2 rounded-full shadow-sm border-2 border-orange-200 hover:bg-orange-50 transition-colors">
+          <div className="relative">
+            <input type="checkbox" className="sr-only" checked={isCompareMode} onChange={() => setIsCompareMode(!isCompareMode)} />
+            <div className={`block w-10 h-6 rounded-full transition-colors ${isCompareMode ? 'bg-orange-400' : 'bg-gray-300'}`}></div>
+            <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isCompareMode ? 'transform translate-x-4' : ''}`}></div>
+          </div>
+          <div className="ml-3 text-sm font-extrabold text-orange-700">
+            ⚖️ 2匹並べて比較する
+          </div>
+        </label>
+      </div>
+
+      <main className={`flex-1 w-full p-4 flex flex-col lg:flex-row gap-6 ${isCompareMode ? 'max-w-7xl' : 'max-w-lg'}`}>
+
+        <div className="flex-1 flex flex-col gap-6">
+          {isCompareMode && <h2 className="text-center font-black text-xl text-orange-500 bg-orange-100 py-2 rounded-full mx-10 border-2 border-orange-200">ワンコ A</h2>}
+          <Simulator idSuffix="A" defaultBreedId="toy-poodle" />
+        </div>
+
+        {isCompareMode && (
+          <div className="flex-1 flex flex-col gap-6 lg:border-l-4 lg:border-dashed lg:border-orange-200 lg:pl-6">
+            <h2 className="text-center font-black text-xl text-pink-500 bg-pink-100 py-2 rounded-full mx-10 border-2 border-pink-200">ワンコ B</h2>
+            <Simulator idSuffix="B" defaultBreedId="shiba" />
+          </div>
+        )}
+
+      </main>
+
+      {/* アフィリエイト（マネタイズ）エリア */}
+      <section className="flex flex-col gap-4 mt-8 w-full max-w-lg px-4 mb-6">
 
           {/* ペット保険の紹介 */}
           <div className="bg-gradient-to-r from-blue-50 to-teal-50 p-5 rounded-3xl shadow-sm border-2 border-blue-100 flex flex-col items-center text-center">
@@ -952,8 +1034,6 @@ export default function App() {
           </div>
 
         </section>
-
-      </main>
 
       {/* Footer */}
       <footer className="w-full bg-orange-100 p-6 mt-auto text-center">
