@@ -909,13 +909,57 @@ export default function App() {
           </div>
         </section>
 
+        {/* アフィリエイト（マネタイズ）エリア */}
+        <section className="flex flex-col gap-4 mt-2">
+
+          {/* ペット保険の紹介 */}
+          <div className="bg-gradient-to-r from-blue-50 to-teal-50 p-5 rounded-3xl shadow-sm border-2 border-blue-100 flex flex-col items-center text-center">
+            <h3 className="text-blue-800 font-extrabold text-base mb-1">
+              🏥 万が一のケガや病気に備えよう
+            </h3>
+            <p className="text-xs text-blue-600/80 font-bold mb-4">
+              シニア期は医療費が急増します。若いうちの加入がおすすめ！
+            </p>
+            <a
+              href="#" // ここにASPのペット保険一括見積もりリンクを入れる
+              className="w-full max-w-xs bg-gradient-to-r from-blue-500 to-teal-400 text-white text-sm font-extrabold py-3 px-4 rounded-2xl shadow-md hover:shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <span>📄</span>
+              複数のペット保険を無料・一括比較！
+            </a>
+            <p className="text-[9px] text-gray-400 mt-2">※提携サイトへ移動します</p>
+          </div>
+
+          {/* スターターセット・フードの紹介 */}
+          <div className="grid grid-cols-2 gap-3">
+            <a href="#" className="bg-white p-4 rounded-3xl shadow-sm border-2 border-orange-100 hover:border-orange-300 transition-colors flex flex-col items-center text-center block group">
+              <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🛍️</div>
+              <h4 className="text-xs font-extrabold text-gray-800 mb-1">はじめての<br/>お迎えセット</h4>
+              <p className="text-[9px] text-gray-500 font-bold">ケージやトイレの準備はこちらから</p>
+              <span className="text-[10px] font-bold text-orange-500 mt-2 flex items-center gap-1">
+                Amazonで見る <span className="text-xs">›</span>
+              </span>
+            </a>
+
+            <a href="#" className="bg-white p-4 rounded-3xl shadow-sm border-2 border-pink-100 hover:border-pink-300 transition-colors flex flex-col items-center text-center block group">
+              <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🍖</div>
+              <h4 className="text-xs font-extrabold text-gray-800 mb-1">獣医師推奨の<br/>プレミアムフード</h4>
+              <p className="text-[9px] text-gray-500 font-bold">健康と長生きのために</p>
+              <span className="text-[10px] font-bold text-pink-500 mt-2 flex items-center gap-1">
+                詳細をチェック <span className="text-xs">›</span>
+              </span>
+            </a>
+          </div>
+
+        </section>
+
       </main>
 
-      {/* Footer / Ad Placeholder */}
-      <footer className="w-full bg-orange-100 p-6 mt-auto">
-        <div className="w-full max-w-sm mx-auto h-16 bg-gray-300 border border-gray-400 border-dashed flex items-center justify-center text-gray-500 text-sm">
-          スポンサーリンク (広告エリア)
-        </div>
+      {/* Footer */}
+      <footer className="w-full bg-orange-100 p-6 mt-auto text-center">
+        <p className="text-xs text-orange-800 font-bold opacity-70">
+          © {new Date().getFullYear()} ワンコお迎えコスト計算機
+        </p>
       </footer>
     </div>
   );
