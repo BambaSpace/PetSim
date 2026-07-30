@@ -186,12 +186,18 @@ const DOG_BREEDS: DogBreed[] = [
   }
 ];
 
-const COMMON_INITIAL_COST = 50000;
 const VACCINE_COST = 15000;
 const INSURANCE_MONTHLY = 3000;
 
 const SENIOR_AGE_START = 7;
 const SENIOR_MEDICAL_MULTIPLIER = 1.5; // シニア期の医療費・ケア増加率
+
+// サイズ別の予防薬（フィラリア・ノミダニ）の年間コスト目安
+const PREVENTION_COST = {
+  '小型犬': 25000,
+  '中型犬': 35000,
+  '大型犬': 45000,
+};
 
 export default function App() {
   const [selectedBreedId, setSelectedBreedId] = useState<string>(DOG_BREEDS[0].id);
@@ -202,24 +208,26 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string>('all');
 
-  // 新しい飼育オプション状態
+  // 飼育オプション状態
+  const [starterSetCost, setStarterSetCost] = useState<number>(50000); // 初期スターターセット（ケージ等）
   const [snackCost, setSnackCost] = useState<number>(3000); // 月額おやつ・サプリ代
   const [hotelCost, setHotelCost] = useState<number>(0); // 年間ホテル・ドッグラン代
   const [trainingCost, setTrainingCost] = useState<number>(0); // 初期しつけ教室代
   const [toiletSheetCost, setToiletSheetCost] = useState<number>(1500); // 月額トイレシート代
+  const [acCost, setAcCost] = useState<number>(3000); // 月額の冷暖房費（エアコン追加分）
 
   const breed = DOG_BREEDS.find((b) => b.id === selectedBreedId) || DOG_BREEDS[0];
 
-  // 1. 初期費用 (生体代 + 用品・登録料 + しつけ教室)
-  const initialCost = breed.price + COMMON_INITIAL_COST + trainingCost;
+  // 1. 初期費用 (生体代 + スターターセット + しつけ教室)
+  const initialCost = breed.price + starterSetCost + trainingCost;
 
   // 2. 基本の年間費用 (シニア期以外)
-  // - 食費・日用品
-  const annualFoodAndGoods = (breed.monthlyFood + snackCost + toiletSheetCost) * 12;
+  // - 食費・日用品・光熱費
+  const annualFoodAndGoods = (breed.monthlyFood + snackCost + toiletSheetCost + acCost) * 12;
   // - 美容・お世話
   const annualCare = (breed.trimmingCost * trimmingFrequency) + hotelCost;
-  // - 医療・保険
-  const annualMedical = VACCINE_COST + (hasInsurance ? INSURANCE_MONTHLY * 12 : 0);
+  // - 医療・保険 (ワクチン + 予防薬 + 保険)
+  const annualMedical = VACCINE_COST + PREVENTION_COST[breed.size] + (hasInsurance ? INSURANCE_MONTHLY * 12 : 0);
 
   const normalAnnualCost = annualFoodAndGoods + annualCare + annualMedical;
 
@@ -348,6 +356,23 @@ export default function App() {
           <h2 className="text-lg font-semibold mb-4 text-gray-800">2. 飼育環境・オプションを選ぶ</h2>
 
           <div className="space-y-5">
+            {/* スターターセット (初期費用) */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2 flex justify-between">
+                <span>スターターセット (初期)</span>
+                <span className="text-xs text-gray-500">ケージ・ベッド等</span>
+              </h3>
+              <select
+                value={starterSetCost}
+                onChange={(e) => setStarterSetCost(Number(e.target.value))}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"
+              >
+                <option value={30000}>節約・最低限 (30,000円)</option>
+                <option value={50000}>普通 (50,000円)</option>
+                <option value={100000}>こだわり・高級 (100,000円)</option>
+              </select>
+            </div>
+
             {/* 保険 */}
             <div>
               <h3 className="text-sm font-medium text-gray-700 mb-2 flex justify-between">
@@ -421,6 +446,23 @@ export default function App() {
                 <option value={1000}>節約・安いもの (1,000円/月)</option>
                 <option value={1500}>普通 (1,500円/月)</option>
                 <option value={3000}>厚手・高級 (3,000円/月)</option>
+              </select>
+            </div>
+
+            {/* 冷暖房費 */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2 flex justify-between">
+                <span>冷暖房費 (月額)</span>
+                <span className="text-xs text-gray-500">留守番時等のエアコン代</span>
+              </h3>
+              <select
+                value={acCost}
+                onChange={(e) => setAcCost(Number(e.target.value))}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"
+              >
+                <option value={0}>計算に含めない (0円/月)</option>
+                <option value={3000}>普通 (3,000円/月)</option>
+                <option value={6000}>24時間つけっぱなし等 (6,000円/月)</option>
               </select>
             </div>
 
@@ -510,6 +552,19 @@ export default function App() {
           <p className="text-xs text-gray-400 mt-2 text-center">
             ※シニア期は医療・保険カテゴリの費用が1.5倍になる想定で計算しています。
           </p>
+
+          {/* SNS Share Button */}
+          <div className="mt-4 flex justify-center">
+            <a
+              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`私のワンコ(${breed.name})お迎え概算生涯費用は ${new Intl.NumberFormat('ja-JP').format(lifetimeCost)}円 でした！🐶🐾\n\n#PetSim #ワンコお迎えコスト計算機\n`)}&url=${encodeURIComponent('https://BambaSpace.github.io/PetSim/')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-black text-white text-sm font-bold py-2 px-6 rounded-full flex items-center gap-2 hover:bg-gray-800 transition-colors"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="w-4 h-4 fill-current"><g><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.92H5.078z"></path></g></svg>
+              X (Twitter) で結果をシェア
+            </a>
+          </div>
         </section>
 
       </main>
