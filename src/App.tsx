@@ -32,6 +32,58 @@ const DOG_BREEDS: DogBreed[] = [
   },
   // --- 小型犬 ---
   {
+    id: 'maltese',
+    name: 'マルチーズ',
+    price: 350000,
+    lifespan: 14,
+    monthlyFood: 4000,
+    trimmingCost: 7000,
+    description: '純白の被毛が美しい。甘えん坊で大人しいが、毎日の被毛ケアが欠かせない。',
+    size: '小型犬',
+    tags: ['一人暮らし向け', '甘えん坊', '抜け毛少ない'],
+    weight: '2〜3kg',
+    walkingTime: '1日20分程度'
+  },
+  {
+    id: 'shih-tzu',
+    name: 'シーズー',
+    price: 250000,
+    lifespan: 14,
+    monthlyFood: 5000,
+    trimmingCost: 6000,
+    description: '穏やかで愛情深い。運動量が少なめで飼いやすいが、暑さに弱い。',
+    size: '小型犬',
+    tags: ['初心者向け', '運動量少なめ'],
+    weight: '4〜8kg',
+    walkingTime: '1日30分程度'
+  },
+  {
+    id: 'pug',
+    name: 'パグ',
+    price: 300000,
+    lifespan: 13,
+    monthlyFood: 6000,
+    trimmingCost: 0,
+    description: '愛嬌のある鼻ペチャ。非常に人懐っこいが、皮膚炎や熱中症に注意。',
+    size: '小型犬',
+    tags: ['ファミリー向け', '抜け毛多い'],
+    weight: '6〜8kg',
+    walkingTime: '1日30分程度'
+  },
+  {
+    id: 'schnauzer',
+    name: 'ミニチュア・シュナウザー',
+    price: 350000,
+    lifespan: 13,
+    monthlyFood: 6000,
+    trimmingCost: 8000,
+    description: 'おじいさんのような眉とヒゲ。賢く勇敢で抜け毛が非常に少ない。',
+    size: '小型犬',
+    tags: ['抜け毛少ない', '賢い', '活発'],
+    weight: '4〜8kg',
+    walkingTime: '1日40分程度'
+  },
+  {
     id: 'toy-poodle',
     name: 'トイプードル',
     price: 400000,
@@ -112,6 +164,32 @@ const DOG_BREEDS: DogBreed[] = [
 
   // --- 中型犬 ---
   {
+    id: 'beagle',
+    name: 'ビーグル',
+    price: 250000,
+    lifespan: 13,
+    monthlyFood: 9000,
+    trimmingCost: 0,
+    description: 'スヌーピーのモデル。底抜けに明るいが、声が大きく食欲旺盛。',
+    size: '中型犬',
+    tags: ['ファミリー向け', '活発', '食いしん坊'],
+    weight: '9〜11kg',
+    walkingTime: '1日1時間程度'
+  },
+  {
+    id: 'border-collie',
+    name: 'ボーダーコリー',
+    price: 350000,
+    lifespan: 13,
+    monthlyFood: 11000,
+    trimmingCost: 5000,
+    description: '全犬種で最も賢いとされる牧羊犬。膨大な運動量と頭脳ゲームが必要。',
+    size: '中型犬',
+    tags: ['運動量非常に多い', '賢い', '上級者向け'],
+    weight: '14〜20kg',
+    walkingTime: '1日2時間以上'
+  },
+  {
     id: 'shiba',
     name: '柴犬',
     price: 250000,
@@ -178,6 +256,45 @@ const DOG_BREEDS: DogBreed[] = [
   },
 
   // --- 大型犬 ---
+  {
+    id: 'dalmatian',
+    name: 'ダルメシアン',
+    price: 300000,
+    lifespan: 12,
+    monthlyFood: 14000,
+    trimmingCost: 0,
+    description: '白地に黒い斑点が特徴的。非常にスタミナがあり、長距離の運動が必要。',
+    size: '大型犬',
+    tags: ['運動量非常に多い', '活発'],
+    weight: '23〜25kg',
+    walkingTime: '1日2時間以上'
+  },
+  {
+    id: 'doberman',
+    name: 'ドーベルマン',
+    price: 350000,
+    lifespan: 11,
+    monthlyFood: 16000,
+    trimmingCost: 0,
+    description: '優美で筋肉質。飼い主に極めて忠実だが、徹底したしつけが不可欠。',
+    size: '大型犬',
+    tags: ['番犬向き', '賢い', '上級者向け'],
+    weight: '32〜45kg',
+    walkingTime: '1日1.5〜2時間'
+  },
+  {
+    id: 'akita',
+    name: '秋田犬',
+    price: 250000,
+    lifespan: 10,
+    monthlyFood: 16000,
+    trimmingCost: 5000,
+    description: '忠犬ハチ公で知られる日本犬。家族には忠実だが警戒心が強い。',
+    size: '大型犬',
+    tags: ['番犬向き', '抜け毛多い', '上級者向け'],
+    weight: '35〜50kg',
+    walkingTime: '1日1.5時間程度'
+  },
   {
     id: 'golden',
     name: 'ゴールデンレトリバー',
@@ -340,16 +457,19 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center">
-      <header className="w-full bg-blue-600 text-white p-4 shadow-md text-center">
-        <h1 className="text-xl font-bold">ワンコお迎えコスト計算機</h1>
+    <div className="min-h-screen bg-orange-50 flex flex-col items-center font-sans text-gray-800">
+      <header className="w-full bg-gradient-to-r from-orange-400 to-pink-400 text-white p-5 shadow-md text-center rounded-b-3xl">
+        <h1 className="text-2xl font-extrabold tracking-wide drop-shadow-md">🐶 ワンコお迎えコスト計算機 🐾</h1>
+        <p className="text-xs font-medium mt-1 opacity-90">〜うちの子にどれくらいかかる？〜</p>
       </header>
 
-      <main className="flex-1 w-full max-w-lg p-4 flex flex-col gap-6">
+      <main className="flex-1 w-full max-w-lg p-4 flex flex-col gap-6 mt-2">
 
         {/* Step 1: Breed Selection */}
-        <section className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-lg font-semibold mb-3 text-gray-800">1. 犬種を選ぶ</h2>
+        <section className="bg-white p-5 rounded-3xl shadow-sm border-2 border-orange-100">
+          <h2 className="text-lg font-bold mb-3 flex items-center gap-2 text-orange-600">
+            <span className="text-2xl">🔍</span> 1. 犬種をえらぶ
+          </h2>
 
           <div className="mb-4 space-y-3">
             <input
@@ -359,36 +479,38 @@ export default function App() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {['all', '小型犬', '中型犬', '大型犬'].map((size) => (
                 <button
                   key={size}
                   onClick={() => setSelectedSize(size)}
-                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-                    selectedSize === size ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  className={`px-4 py-1.5 text-xs font-bold rounded-full transition-transform active:scale-95 ${
+                    selectedSize === size ? 'bg-orange-500 text-white shadow-md' : 'bg-orange-50 text-orange-600 hover:bg-orange-100'
                   }`}
                 >
-                  {size === 'all' ? 'すべて' : size}
+                  {size === 'all' ? '🐾 すべて' : size}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 max-h-[400px] overflow-y-auto pr-1">
+          <div className="flex flex-col gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
             {filteredBreeds.length > 0 ? (
               ['カスタム', '小型犬', '中型犬', '大型犬'].map(sizeCategory => {
                 const breedsInSize = filteredBreeds.filter(b => b.size === sizeCategory);
                 if (breedsInSize.length === 0) return null;
 
                 return (
-                  <div key={sizeCategory} className="mb-2">
-                    <h3 className="text-sm font-bold text-blue-800 bg-blue-100 px-3 py-1 rounded-md mb-2">{sizeCategory}</h3>
+                  <div key={sizeCategory} className="mb-3">
+                    <h3 className="text-xs font-extrabold text-pink-600 bg-pink-50 px-3 py-1.5 rounded-full mb-3 inline-block shadow-sm">
+                      ✨ {sizeCategory}
+                    </h3>
                     <div className="flex flex-col gap-2">
                       {breedsInSize.map((b) => (
                         <label
                           key={b.id}
-                          className={`p-3 rounded-lg border-2 cursor-pointer transition-colors flex-shrink-0 ${
-                            selectedBreedId === b.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
+                          className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                            selectedBreedId === b.id ? 'border-orange-400 bg-orange-50 shadow-md transform scale-[1.02]' : 'border-orange-100 bg-white hover:bg-orange-50 hover:border-orange-200'
                           }`}
                         >
                           <div className="flex items-start gap-3">
@@ -398,17 +520,17 @@ export default function App() {
                               value={b.id}
                               checked={selectedBreedId === b.id}
                               onChange={(e) => setSelectedBreedId(e.target.value)}
-                              className="w-5 h-5 mt-0.5 text-blue-600 focus:ring-blue-500"
+                              className="w-5 h-5 mt-1 text-orange-500 focus:ring-orange-400 focus:ring-offset-orange-50"
                             />
                             <div className="flex-1">
                               <div className="flex justify-between items-center mb-1">
-                                <div className="font-bold text-gray-900">{b.name}</div>
+                                <div className="font-extrabold text-gray-800 text-base">{b.name}</div>
                               </div>
-                              <div className="text-xs text-gray-500 leading-snug mb-1.5">{b.description}</div>
-                              <div className="flex flex-wrap gap-1">
+                              <div className="text-xs text-gray-600 leading-relaxed mb-2">{b.description}</div>
+                              <div className="flex flex-wrap gap-1.5">
                                 {b.tags.map(tag => (
-                                  <span key={tag} className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-nowrap">
-                                    #{tag}
+                                  <span key={tag} className="text-[10px] font-bold bg-white border border-pink-200 text-pink-500 px-2 py-0.5 rounded-full shadow-sm">
+                                    {tag}
                                   </span>
                                 ))}
                               </div>
@@ -427,33 +549,38 @@ export default function App() {
         </section>
 
         {/* 基本データの表示 */}
-        <section className="bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-200">
-          <h2 className="text-sm font-bold text-blue-800 mb-2">選択中の犬種データ: {breed.name}</h2>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="bg-white p-2 rounded shadow-sm">
-              <span className="text-gray-500 block text-xs">推定寿命</span>
-              <span className="font-semibold text-gray-800">{activeLifespan}年</span>
+        <section className="bg-gradient-to-br from-yellow-50 to-orange-50 p-5 rounded-3xl shadow-sm border-2 border-yellow-200 relative overflow-hidden">
+          <div className="absolute top-[-10px] right-[-10px] text-6xl opacity-10">🦴</div>
+          <h2 className="text-sm font-extrabold text-orange-700 mb-3 flex items-center gap-1">
+            <span className="text-lg">📋</span> {breed.name} の基本データ
+          </h2>
+          <div className="grid grid-cols-2 gap-3 text-sm relative z-10">
+            <div className="bg-white/80 backdrop-blur-sm p-3 rounded-2xl shadow-sm border border-white">
+              <span className="text-orange-500 font-bold block text-[10px] mb-1">⏳ 推定寿命</span>
+              <span className="font-extrabold text-gray-800 text-lg">{activeLifespan}<span className="text-xs font-normal">年</span></span>
             </div>
-            <div className="bg-white p-2 rounded shadow-sm">
-              <span className="text-gray-500 block text-xs">サイズ目安</span>
-              <span className="font-semibold text-gray-800">{activeSize}</span>
+            <div className="bg-white/80 backdrop-blur-sm p-3 rounded-2xl shadow-sm border border-white">
+              <span className="text-orange-500 font-bold block text-[10px] mb-1">📏 サイズ</span>
+              <span className="font-extrabold text-gray-800 text-lg">{activeSize}</span>
             </div>
-            <div className="bg-white p-2 rounded shadow-sm">
-              <span className="text-gray-500 block text-xs">体重目安</span>
-              <span className="font-semibold text-gray-800">{breed.weight}</span>
+            <div className="bg-white/80 backdrop-blur-sm p-3 rounded-2xl shadow-sm border border-white">
+              <span className="text-orange-500 font-bold block text-[10px] mb-1">⚖️ 体重目安</span>
+              <span className="font-extrabold text-gray-800">{breed.weight}</span>
             </div>
-            <div className="bg-white p-2 rounded shadow-sm">
-              <span className="text-gray-500 block text-xs">必要散歩時間</span>
-              <span className="font-semibold text-gray-800">{breed.walkingTime}</span>
+            <div className="bg-white/80 backdrop-blur-sm p-3 rounded-2xl shadow-sm border border-white">
+              <span className="text-orange-500 font-bold block text-[10px] mb-1">🦮 散歩時間</span>
+              <span className="font-extrabold text-gray-800">{breed.walkingTime}</span>
             </div>
           </div>
         </section>
 
         {/* カスタム設定 (ミックス・保護犬選択時のみ表示) */}
         {isCustom && (
-          <section className="bg-yellow-50 p-4 rounded-xl shadow-sm border border-yellow-200">
-            <h2 className="text-lg font-semibold mb-4 text-gray-800">2. カスタム情報の設定</h2>
-            <div className="space-y-4">
+          <section className="bg-green-50 p-5 rounded-3xl shadow-sm border-2 border-green-200">
+            <h2 className="text-lg font-bold mb-4 text-green-700 flex items-center gap-2">
+              <span className="text-2xl">✏️</span> 2. カスタム情報の設定
+            </h2>
+            <div className="space-y-5">
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-2 flex justify-between">
                   <span>生体代（譲渡費用など）</span>
@@ -477,27 +604,29 @@ export default function App() {
                 />
               </div>
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">成長後の予想サイズ</h3>
-                <div className="flex bg-white p-1 rounded-lg border border-gray-300">
+                <h3 className="text-sm font-bold text-gray-700 mb-2">成長後の予想サイズ</h3>
+                <div className="flex bg-white p-1.5 rounded-xl border-2 border-green-100 shadow-inner">
                   {['小型犬', '中型犬', '大型犬'].map(s => (
                     <button
                       key={s}
                       onClick={() => setCustomSize(s as any)}
-                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${customSize === s ? 'bg-blue-600 text-white shadow' : 'text-gray-500'}`}
+                      className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${customSize === s ? 'bg-green-500 text-white shadow-md' : 'text-gray-500 hover:bg-green-50'}`}
                     >
                       {s}
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-gray-400 mt-1">※このサイズによって予防薬（フィラリア等）の金額が変わります。</p>
+                <p className="text-[10px] text-green-600 mt-1.5">※このサイズによって予防薬（フィラリア等）の金額が変わります。</p>
               </div>
             </div>
           </section>
         )}
 
         {/* Step 2: Environment Settings */}
-        <section className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-lg font-semibold mb-4 text-gray-800">{isCustom ? '3.' : '2.'} 飼育環境・オプションを選ぶ</h2>
+        <section className="bg-white p-5 rounded-3xl shadow-sm border-2 border-orange-100">
+          <h2 className="text-lg font-bold mb-5 flex items-center gap-2 text-orange-600">
+            <span className="text-2xl">🏡</span> {isCustom ? '3.' : '2.'} お世話オプションをえらぶ
+          </h2>
 
           <div className="space-y-5">
             {/* スターターセット (初期費用) */}
@@ -685,11 +814,14 @@ export default function App() {
         </section>
 
         {/* Step 3: Result */}
-        <section className="bg-white p-5 rounded-xl shadow-md border-t-4 border-blue-500 flex flex-col gap-4">
-          <div>
-            <h2 className="text-center text-sm font-bold text-gray-500 mb-2">概算生涯費用（推定寿命: {activeLifespan}年）</h2>
-            <div className="text-center mb-2">
-              <span className="text-4xl font-extrabold text-red-600">{formatCurrency(lifetimeCost)}</span>
+        <section className="bg-gradient-to-b from-white to-orange-50 p-6 rounded-3xl shadow-lg border-4 border-orange-300 flex flex-col gap-4 relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 text-9xl opacity-5 transform rotate-12">💰</div>
+          <div className="relative z-10">
+            <h2 className="text-center text-sm font-extrabold text-orange-600 mb-2 bg-orange-100 inline-block px-4 py-1 rounded-full mx-auto block w-fit">
+              ✨ 概算生涯費用（推定寿命: {activeLifespan}年） ✨
+            </h2>
+            <div className="text-center mt-4 mb-2">
+              <span className="text-5xl font-black text-pink-500 tracking-tight drop-shadow-sm">{formatCurrency(lifetimeCost)}</span>
             </div>
           </div>
 
@@ -709,16 +841,16 @@ export default function App() {
                       labelStyle={{ color: '#374151', fontWeight: 'bold' }}
                     />
                     <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px' }} />
-                    <Bar dataKey="initial" name="初期費用" stackId="a" fill="#60a5fa" />
-                    <Bar dataKey="running" name="年間費用" stackId="a" fill="#f472b6" />
+                    <Bar dataKey="initial" name="初期費用" stackId="a" fill="#fb923c" radius={[0, 0, 4, 4]} />
+                    <Bar dataKey="running" name="年間費用" stackId="a" fill="#f472b6" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
             {/* 内訳（円グラフ） */}
-            <div>
-              <h3 className="text-sm font-bold text-gray-700 text-center mb-2">生涯費用の内訳</h3>
+            <div className="bg-white/60 p-4 rounded-3xl border border-white shadow-sm">
+              <h3 className="text-sm font-extrabold text-orange-600 text-center mb-2">📊 生涯費用の内訳</h3>
               <div className="h-48 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -726,52 +858,53 @@ export default function App() {
                       data={chartData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={50}
-                      outerRadius={70}
-                      paddingAngle={2}
+                      innerRadius={55}
+                      outerRadius={75}
+                      paddingAngle={4}
                       dataKey="value"
+                      stroke="none"
                     >
-                      <Cell fill="#60a5fa" /> {/* 初期費用 */}
+                      <Cell fill="#fb923c" /> {/* 初期費用 */}
                       <Cell fill="#f472b6" /> {/* 食費・日用品 */}
                       <Cell fill="#34d399" /> {/* 美容・お世話 */}
                       <Cell fill="#fbbf24" /> {/* 医療・保険 */}
                     </Pie>
-                    <PieTooltip formatter={(value: number) => formatCurrency(value)} />
-                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px' }} />
+                    <PieTooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} iconType="circle" />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </div>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-4 space-y-3 mt-4 text-sm">
-            <div className="flex justify-between items-center border-b border-gray-200 pb-2">
-              <span className="text-gray-600">初期費用</span>
-              <span className="font-semibold text-gray-800">{formatCurrency(initialCost)}</span>
+          <div className="bg-white/80 rounded-2xl p-5 space-y-4 mt-4 text-sm shadow-sm border border-white">
+            <div className="flex justify-between items-center border-b border-orange-100 pb-3">
+              <span className="text-gray-600 font-bold flex items-center gap-2"><span className="text-lg">🎁</span>初期費用</span>
+              <span className="font-black text-gray-800 text-lg">{formatCurrency(initialCost)}</span>
             </div>
-            <div className="flex justify-between items-center border-b border-gray-200 pb-2">
-              <span className="text-gray-600">年間費用 (若年期)</span>
-              <span className="font-semibold text-gray-800">{formatCurrency(normalAnnualCost)}</span>
+            <div className="flex justify-between items-center border-b border-orange-100 pb-3">
+              <span className="text-gray-600 font-bold flex items-center gap-2"><span className="text-lg">🌱</span>年間費用 (若年期)</span>
+              <span className="font-black text-gray-800 text-lg">{formatCurrency(normalAnnualCost)}</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">年間費用 (シニア期7歳~)</span>
-              <span className="font-semibold text-red-500">{formatCurrency(normalAnnualCost + (annualMedical * (SENIOR_MEDICAL_MULTIPLIER - 1)))}</span>
+            <div className="flex justify-between items-center pt-1">
+              <span className="text-gray-600 font-bold flex items-center gap-2"><span className="text-lg">🍂</span>年間費用 (シニア期7歳~)</span>
+              <span className="font-black text-pink-500 text-lg">{formatCurrency(normalAnnualCost + (annualMedical * (SENIOR_MEDICAL_MULTIPLIER - 1)))}</span>
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-2 text-center">
+          <p className="text-[10px] text-orange-600/70 mt-3 text-center font-bold">
             ※シニア期は医療・保険カテゴリの費用が1.5倍になる想定で計算しています。
           </p>
 
           {/* SNS Share Button */}
-          <div className="mt-4 flex justify-center">
+          <div className="mt-5 flex justify-center relative z-10">
             <a
               href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`私のワンコ(${breed.name})お迎え概算生涯費用は ${new Intl.NumberFormat('ja-JP').format(lifetimeCost)}円 でした！🐶🐾\n\n#PetSim #ワンコお迎えコスト計算機\n`)}&url=${encodeURIComponent('https://BambaSpace.github.io/PetSim/')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-black text-white text-sm font-bold py-2 px-6 rounded-full flex items-center gap-2 hover:bg-gray-800 transition-colors"
+              className="bg-gray-900 text-white text-sm font-extrabold py-3 px-8 rounded-full flex items-center gap-2 hover:bg-gray-800 transition-transform active:scale-95 shadow-lg"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true" className="w-4 h-4 fill-current"><g><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.92H5.078z"></path></g></svg>
-              X (Twitter) で結果をシェア
+              X (Twitter) で結果をシェアする
             </a>
           </div>
         </section>
@@ -779,7 +912,7 @@ export default function App() {
       </main>
 
       {/* Footer / Ad Placeholder */}
-      <footer className="w-full bg-gray-200 p-4 mt-auto">
+      <footer className="w-full bg-orange-100 p-6 mt-auto">
         <div className="w-full max-w-sm mx-auto h-16 bg-gray-300 border border-gray-400 border-dashed flex items-center justify-center text-gray-500 text-sm">
           スポンサーリンク (広告エリア)
         </div>
