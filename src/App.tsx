@@ -616,7 +616,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
               placeholder="犬種名や特徴で検索..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 md:p-2 border border-gray-300 rounded-lg text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <div className="flex gap-2 flex-wrap">
               {['all', '小型犬', '中型犬', '大型犬'].map((size) => (
@@ -726,17 +726,17 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
                 placeholder="例: ポチ、ココ..."
                 value={dogName}
                 onChange={(e) => setDogName(e.target.value)}
-                className="w-full p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors"
+                className="w-full p-3 md:p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <h3 className="text-sm font-medium dark:text-gray-300 text-gray-700 mb-2">お住まいの地域</h3>
                 <select
                   value={areaScale}
                   onChange={(e) => setAreaScale(Number(e.target.value))}
-                  className="w-full p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-sm bg-white transition-colors"
+                  className="w-full p-3 md:p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-base md:text-sm bg-white transition-colors"
                 >
                   <option value={1.0}>地方・郊外 (標準)</option>
                   <option value={1.1}>都市部 (物価高め)</option>
@@ -747,7 +747,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
                 <select
                   value={housingType}
                   onChange={(e) => setHousingType(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"
+                  className="w-full p-3 md:p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-base md:text-sm bg-white transition-colors"
                 >
                   <option value="owned">持ち家</option>
                   <option value="rental">賃貸 (修繕費を加算)</option>
@@ -821,7 +821,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
               <select
                 value={starterSetCost}
                 onChange={(e) => setStarterSetCost(Number(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"
+                className="w-full p-3 md:p-2 border border-gray-300 rounded-lg text-base md:text-sm bg-white"
               >
                 <option value={30000}>節約・最低限 (30,000円)</option>
                 <option value={50000}>普通 (50,000円)</option>
@@ -838,13 +838,13 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
               <div className="flex bg-gray-100 p-1 rounded-lg">
                 <button
                   onClick={() => setHasInsurance(true)}
-                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${hasInsurance ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${hasInsurance ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
                 >
                   加入する
                 </button>
                 <button
                   onClick={() => setHasInsurance(false)}
-                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${!hasInsurance ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${!hasInsurance ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
                 >
                   加入しない
                 </button>
@@ -883,7 +883,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
               <select
                 value={snackCost}
                 onChange={(e) => setSnackCost(Number(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"
+                className="w-full p-3 md:p-2 border border-gray-300 rounded-lg text-base md:text-sm bg-white"
               >
                 <option value={1000}>控えめ (1,000円/月)</option>
                 <option value={3000}>普通 (3,000円/月)</option>
@@ -897,7 +897,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
               <select
                 value={toiletSheetCost}
                 onChange={(e) => setToiletSheetCost(Number(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"
+                className="w-full p-3 md:p-2 border border-gray-300 rounded-lg text-base md:text-sm bg-white"
               >
                 <option value={1000}>節約・安いもの (1,000円/月)</option>
                 <option value={1500}>普通 (1,500円/月)</option>
@@ -914,7 +914,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
               <select
                 value={acCost}
                 onChange={(e) => setAcCost(Number(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"
+                className="w-full p-3 md:p-2 border border-gray-300 rounded-lg text-base md:text-sm bg-white"
               >
                 <option value={0}>計算に含めない (0円/月)</option>
                 <option value={3000}>普通 (3,000円/月)</option>
@@ -928,7 +928,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
               <select
                 value={hotelCost}
                 onChange={(e) => setHotelCost(Number(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"
+                className="w-full p-3 md:p-2 border border-gray-300 rounded-lg text-base md:text-sm bg-white"
               >
                 <option value={0}>利用しない (0円/年)</option>
                 <option value={20000}>たまに利用 (20,000円/年)</option>
@@ -942,13 +942,13 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
               <div className="flex bg-gray-100 p-1 rounded-lg">
                 <button
                   onClick={() => setHasSpayNeuter(true)}
-                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${hasSpayNeuter ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${hasSpayNeuter ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
                 >
                   受ける (約40,000円)
                 </button>
                 <button
                   onClick={() => setHasSpayNeuter(false)}
-                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${!hasSpayNeuter ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${!hasSpayNeuter ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
                 >
                   受けない
                 </button>
@@ -961,13 +961,13 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
               <div className="flex bg-gray-100 p-1 rounded-lg">
                 <button
                   onClick={() => setHasAnnualCheckup(true)}
-                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${hasAnnualCheckup ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${hasAnnualCheckup ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
                 >
                   毎年受ける (約20,000円)
                 </button>
                 <button
                   onClick={() => setHasAnnualCheckup(false)}
-                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${!hasAnnualCheckup ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${!hasAnnualCheckup ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
                 >
                   受けない・都度
                 </button>
@@ -980,13 +980,13 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
               <div className="flex bg-gray-100 p-1 rounded-lg">
                 <button
                   onClick={() => setTrainingCost(50000)}
-                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${trainingCost > 0 ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${trainingCost > 0 ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
                 >
                   通う (50,000円)
                 </button>
                 <button
                   onClick={() => setTrainingCost(0)}
-                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${trainingCost === 0 ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${trainingCost === 0 ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
                 >
                   自分でやる
                 </button>
@@ -1014,7 +1014,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
             {/* 年表（タイムライン）グラフ */}
             <div>
               <h3 className="text-sm font-bold text-gray-700 text-center mb-2">年齢ごとの費用推移</h3>
-              <div className="h-40 w-full">
+              <div className="h-48 md:h-40 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={timelineData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
@@ -1035,7 +1035,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
             {/* 内訳（円グラフ） */}
             <div className="bg-white/60 p-4 rounded-3xl border border-white shadow-sm">
               <h3 className="text-sm font-extrabold text-orange-600 text-center mb-2">📊 生涯費用の内訳</h3>
-              <div className="h-48 w-full">
+              <div className="h-56 md:h-48 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -1218,7 +1218,7 @@ export default function App() {
           </div>
 
           {/* スターターセット・フードの紹介 */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <a href="#" className="bg-white p-4 rounded-3xl shadow-sm border-2 border-orange-100 hover:border-orange-300 transition-colors flex flex-col items-center text-center block group">
               <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🛍️</div>
               <h4 className="text-xs font-extrabold text-gray-800 mb-1">はじめての<br/>お迎えセット</h4>
