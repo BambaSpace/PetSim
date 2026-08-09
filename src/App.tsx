@@ -2,29 +2,63 @@ import { useState, useEffect, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as PieTooltip, Legend, BarChart, Bar, XAxis, YAxis, Tooltip as BarTooltip, CartesianGrid } from 'recharts';
 import html2canvas from 'html2canvas';
 
-// オートセーブ用のカスタムフック
-function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => void] {
+// URLとLocalStorageを同期するカスタムフック
+function useUrlSyncedState<T>(key: string, initialValue: T): [T, (value: T) => void] {
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
+      // 1. まずURLパラメータを確認
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlValue = searchParams.get(key);
+      if (urlValue !== null) {
+        return JSON.parse(decodeURIComponent(urlValue));
+      }
+      // 2. 次にLocalStorageを確認
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
     } catch (error) {
-      console.error(error);
+      console.error(`Error reading ${key}:`, error);
       return initialValue;
     }
   });
 
   const setValue = (value: T) => {
     try {
+      // Stateを更新
       setStoredValue(value);
+      // LocalStorageを更新
       window.localStorage.setItem(key, JSON.stringify(value));
+      // URLパラメータを更新 (ブラウザの履歴には追加せず、URLだけ書き換える)
+      const searchParams = new URLSearchParams(window.location.search);
+      searchParams.set(key, encodeURIComponent(JSON.stringify(value)));
+      const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
+      window.history.replaceState(null, '', newUrl);
     } catch (error) {
-      console.error(error);
+      console.error(`Error setting ${key}:`, error);
     }
   };
 
+  // 初期ロード時にURLに反映されていない場合は反映する
+  useEffect(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (!searchParams.has(key)) {
+        searchParams.set(key, encodeURIComponent(JSON.stringify(storedValue)));
+        const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
+        window.history.replaceState(null, '', newUrl);
+      }
+    } catch (error) {
+       console.error(`Error initializing URL for ${key}:`, error);
+    }
+  }, [key, storedValue]);
+
   return [storedValue, setValue];
 }
+
+type DiseaseRisk = {
+  name: string;
+  probability: number; // 発症確率 (0~1)
+  cost: number; // 生涯での概算治療費
+};
 
 type DogBreed = {
   id: string;
@@ -38,6 +72,8 @@ type DogBreed = {
   tags: string[];
   weight: string; // 体重の目安
   walkingTime: string; // 必要な散歩時間
+  diseases: DiseaseRisk[]; // かかりやすい病気とリスク
+  tips: string[]; // 節約・飼育Tips
 };
 
 const DOG_BREEDS: DogBreed[] = [
@@ -53,11 +89,15 @@ const DOG_BREEDS: DogBreed[] = [
     size: 'カスタム',
     tags: ['ミックス', '保護犬'],
     weight: '自由入力',
-    walkingTime: '体格に合わせる'
+    walkingTime: '体格に合わせる',
+    diseases: [],
+    tips: ['一般的にミックス犬は遺伝的疾患が少ない傾向にありますが、毎年の健康診断は欠かさずに受けましょう。']
   },
   // --- 小型犬 ---
   {
     id: 'maltese',
+    diseases: [ { name: "流涙症（涙やけ）", probability: 0.6, cost: 50000 }, { name: "僧帽弁閉鎖不全症", probability: 0.3, cost: 400000 } ],
+    tips: ['自宅でのこまめなブラッシングと涙やけケアで、トリミング費用や皮膚炎の治療費を節約できます。'],
     name: 'マルチーズ',
     price: 350000,
     lifespan: 14,
@@ -71,6 +111,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'shih-tzu',
+    diseases: [ { name: "外耳炎", probability: 0.7, cost: 80000 }, { name: "角膜炎", probability: 0.5, cost: 60000 } ],
+    tips: ['耳掃除を定期的に行い、外耳炎を予防しましょう。自宅シャンプーを覚えれば美容代が浮きます。'],
     name: 'シーズー',
     price: 250000,
     lifespan: 14,
@@ -84,6 +126,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'pug',
+    diseases: [ { name: "短頭種気道症候群", probability: 0.4, cost: 300000 }, { name: "皮膚炎", probability: 0.6, cost: 100000 } ],
+    tips: ['夏場のエアコン代は必須ですが、サーキュレーターを併用することで電気代を少し節約できます。'],
     name: 'パグ',
     price: 300000,
     lifespan: 13,
@@ -97,6 +141,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'schnauzer',
+    diseases: [ { name: "尿路結石症", probability: 0.3, cost: 150000 }, { name: "白内障", probability: 0.25, cost: 300000 } ],
+    tips: ['水分をしっかり摂らせることで尿路結石のリスクを下げられます。療法食になると食費が上がります。'],
     name: 'ミニチュア・シュナウザー',
     price: 350000,
     lifespan: 13,
@@ -110,6 +156,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'toy-poodle',
+    diseases: [ { name: "膝蓋骨脱臼（パテラ）", probability: 0.4, cost: 250000 }, { name: "外耳炎", probability: 0.5, cost: 60000 } ],
+    tips: ['床に滑り止めマットを敷くことで、パテラ（膝の脱臼）の予防になり、将来の高額な手術費を防げます。'],
     name: 'トイプードル',
     price: 400000,
     lifespan: 15,
@@ -123,6 +171,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'chihuahua',
+    diseases: [ { name: "水頭症", probability: 0.1, cost: 500000 }, { name: "膝蓋骨脱臼（パテラ）", probability: 0.4, cost: 250000 } ],
+    tips: ['段差からの飛び降りを防ぐ環境づくりが最大の節約に。服は買いすぎず、お下がりやフリマも活用しましょう。'],
     name: 'チワワ',
     price: 300000,
     lifespan: 14,
@@ -136,6 +186,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'dachshund',
+    diseases: [ { name: "椎間板ヘルニア", probability: 0.25, cost: 400000 }, { name: "歯周病", probability: 0.7, cost: 50000 } ],
+    tips: ['肥満防止と段差をなくすことでヘルニアを予防。ヘルニアの手術は非常に高額です。毎日の歯磨きも必須！'],
     name: 'ミニチュアダックスフンド',
     price: 300000,
     lifespan: 14,
@@ -149,6 +201,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'pomeranian',
+    diseases: [ { name: "気管虚脱", probability: 0.3, cost: 150000 }, { name: "骨折", probability: 0.2, cost: 200000 } ],
+    tips: ['首輪ではなくハーネスを使うことで気管への負担を減らせます。骨が細いので抱っこからの落下に要注意。'],
     name: 'ポメラニアン',
     price: 350000,
     lifespan: 13,
@@ -162,6 +216,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'papillon',
+    diseases: [ { name: "膝蓋骨脱臼（パテラ）", probability: 0.3, cost: 250000 }, { name: "進行性網膜萎縮症", probability: 0.1, cost: 100000 } ],
+    tips: ['運動能力が高い分、足腰に負担がかかることも。適正体重を維持することが病気予防の近道です。'],
     name: 'パピヨン',
     price: 250000,
     lifespan: 15,
@@ -175,6 +231,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'yorkie',
+    diseases: [ { name: "気管虚脱", probability: 0.3, cost: 150000 }, { name: "低血糖症（幼犬期）", probability: 0.2, cost: 30000 } ],
+    tips: ['長毛を維持するとトリミング代がかさむため、お手入れしやすいショートカット（パピーカット）が人気です。'],
     name: 'ヨークシャーテリア',
     price: 300000,
     lifespan: 14,
@@ -190,6 +248,8 @@ const DOG_BREEDS: DogBreed[] = [
   // --- 中型犬 ---
   {
     id: 'beagle',
+    diseases: [ { name: "外耳炎", probability: 0.6, cost: 80000 }, { name: "肥満による関節炎", probability: 0.4, cost: 100000 } ],
+    tips: ['食欲旺盛なので肥満に注意。ご飯の計量を徹底し、おやつのあげすぎを防ぐのが一番の節約になります。'],
     name: 'ビーグル',
     price: 250000,
     lifespan: 13,
@@ -203,6 +263,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'border-collie',
+    diseases: [ { name: "股関節形成不全", probability: 0.15, cost: 400000 }, { name: "コリー眼異常", probability: 0.1, cost: 100000 } ],
+    tips: ['運動量が多いため、ドッグラン付きの公園の近くに住むなど、環境選びがコストに影響します。'],
     name: 'ボーダーコリー',
     price: 350000,
     lifespan: 13,
@@ -216,6 +278,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'shiba',
+    diseases: [ { name: "アトピー性皮膚炎", probability: 0.4, cost: 200000 }, { name: "緑内障", probability: 0.15, cost: 300000 } ],
+    tips: ['皮膚トラブルが多いため、質の良いフード選びが重要ですが、大袋でまとめ買いするとコストを抑えられます。'],
     name: '柴犬',
     price: 250000,
     lifespan: 14,
@@ -229,6 +293,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'corgi',
+    diseases: [ { name: "椎間板ヘルニア", probability: 0.3, cost: 400000 }, { name: "変性性脊髄症（DM）", probability: 0.1, cost: 200000 } ],
+    tips: ['太りやすいので体重管理が超重要。ヘルニア予防のため、抱っこの仕方（腰を支える）にも気をつけましょう。'],
     name: 'ウェルシュ・コーギー',
     price: 300000,
     lifespan: 13,
@@ -242,6 +308,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'spitz',
+    diseases: [ { name: "膝蓋骨脱臼（パテラ）", probability: 0.3, cost: 250000 }, { name: "流涙症", probability: 0.4, cost: 50000 } ],
+    tips: ['抜け毛が非常に多いので、自宅でのこまめなブラッシングを日課にすることでトリミング代を抑えられます。'],
     name: '日本スピッツ',
     price: 300000,
     lifespan: 13,
@@ -255,6 +323,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'sheltie',
+    diseases: [ { name: "コリー眼異常", probability: 0.2, cost: 100000 }, { name: "甲状腺機能低下症", probability: 0.15, cost: 150000 } ],
+    tips: ['被毛の手入れをプロに任せると高額になります。スリッカーブラシ等でのセルフケアを習得しましょう。'],
     name: 'シェットランドシープドッグ',
     price: 350000,
     lifespan: 12,
@@ -268,6 +338,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'french-bulldog',
+    diseases: [ { name: "短頭種気道症候群", probability: 0.6, cost: 300000 }, { name: "皮膚炎", probability: 0.5, cost: 150000 } ],
+    tips: ['温度管理が命。夏場のエアコン代はケチらず、代わりにペット保険は補償割合の高いものを選ぶと安心です。'],
     name: 'フレンチブルドッグ',
     price: 400000,
     lifespan: 10,
@@ -283,6 +355,8 @@ const DOG_BREEDS: DogBreed[] = [
   // --- 大型犬 ---
   {
     id: 'dalmatian',
+    diseases: [ { name: "尿路結石（尿酸塩結石）", probability: 0.3, cost: 200000 }, { name: "難聴", probability: 0.2, cost: 50000 } ],
+    tips: ['特殊な尿路結石ができやすい犬種です。飲水量を増やし、指定された療法食を守ることが一番の治療費節約です。'],
     name: 'ダルメシアン',
     price: 300000,
     lifespan: 12,
@@ -296,6 +370,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'doberman',
+    diseases: [ { name: "拡張型心筋症", probability: 0.25, cost: 500000 }, { name: "胃拡張・捻転", probability: 0.15, cost: 300000 } ],
+    tips: ['胃捻転を防ぐため、食後すぐの運動は絶対に避けましょう。また、しつけ教室代は惜しまない方が後々のためです。'],
     name: 'ドーベルマン',
     price: 350000,
     lifespan: 11,
@@ -309,6 +385,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'akita',
+    diseases: [ { name: "股関節形成不全", probability: 0.2, cost: 400000 }, { name: "甲状腺機能低下症", probability: 0.15, cost: 150000 } ],
+    tips: ['体が大きく力が強いため、首輪やリードなどの消耗品は頑丈で良質なものを長く使うのがおすすめです。'],
     name: '秋田犬',
     price: 250000,
     lifespan: 10,
@@ -322,6 +400,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'golden',
+    diseases: [ { name: "悪性腫瘍（ガン）", probability: 0.4, cost: 800000 }, { name: "股関節形成不全", probability: 0.2, cost: 400000 } ],
+    tips: ['ガンなどの大病にかかるリスクが高め。ペット保険は必ず入り、医療費の貯金もしっかり準備しておきましょう。'],
     name: 'ゴールデンレトリバー',
     price: 350000,
     lifespan: 11,
@@ -335,6 +415,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'labrador',
+    diseases: [ { name: "悪性腫瘍", probability: 0.3, cost: 600000 }, { name: "肥満による関節炎", probability: 0.4, cost: 150000 } ],
+    tips: ['非常に食欲旺盛です。おやつをローカロリーな野菜（キャベツ等）に代えることで、健康維持と節約を両立できます。'],
     name: 'ラブラドールレトリバー',
     price: 300000,
     lifespan: 12,
@@ -348,6 +430,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'husky',
+    diseases: [ { name: "白内障", probability: 0.2, cost: 300000 }, { name: "股関節形成不全", probability: 0.15, cost: 400000 } ],
+    tips: ['抜け毛の量がすさまじいため、強力な掃除機が必要です。また夏の冷房代は多めに見積もっておく必要があります。'],
     name: 'シベリアンハスキー',
     price: 350000,
     lifespan: 12,
@@ -361,6 +445,8 @@ const DOG_BREEDS: DogBreed[] = [
   },
   {
     id: 'bernese',
+    diseases: [ { name: "悪性腫瘍（組織球肉腫など）", probability: 0.5, cost: 800000 }, { name: "胃捻転", probability: 0.2, cost: 300000 } ],
+    tips: ['寿命が短く、ガンにかかる確率が高い犬種です。医療費がかさむ前提で、日々の消耗品はまとめ買い等で工夫を。'],
     name: 'バーニーズマウンテンドッグ',
     price: 400000,
     lifespan: 8,
@@ -388,26 +474,30 @@ const PREVENTION_COST = {
 };
 
 function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBreedId: string }) {
-  // useLocalStorageを用いて状態を保存・復元
-  const [selectedBreedId, setSelectedBreedId] = useLocalStorage<string>(`selectedBreedId_${idSuffix}`, defaultBreedId);
-  const [hasInsurance, setHasInsurance] = useLocalStorage<boolean>(`hasInsurance_${idSuffix}`, true);
-  const [trimmingFrequency, setTrimmingFrequency] = useLocalStorage<number>(`trimmingFrequency_${idSuffix}`, 12);
+  // useUrlSyncedStateを用いて状態を保存・復元
+  const [selectedBreedId, setSelectedBreedId] = useUrlSyncedState<string>(`selectedBreedId_${idSuffix}`, defaultBreedId);
+  const [hasInsurance, setHasInsurance] = useUrlSyncedState<boolean>(`hasInsurance_${idSuffix}`, true);
+  const [trimmingFrequency, setTrimmingFrequency] = useUrlSyncedState<number>(`trimmingFrequency_${idSuffix}`, 12);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string>('all');
 
-  const [customPrice, setCustomPrice] = useLocalStorage<number>(`customPrice_${idSuffix}`, 0);
-  const [customLifespan, setCustomLifespan] = useLocalStorage<number>(`customLifespan_${idSuffix}`, 14);
-  const [customSize, setCustomSize] = useLocalStorage<'小型犬' | '中型犬' | '大型犬'>(`customSize_${idSuffix}`, '小型犬');
+  const [customPrice, setCustomPrice] = useUrlSyncedState<number>(`customPrice_${idSuffix}`, 0);
+  const [customLifespan, setCustomLifespan] = useUrlSyncedState<number>(`customLifespan_${idSuffix}`, 14);
+  const [customSize, setCustomSize] = useUrlSyncedState<'小型犬' | '中型犬' | '大型犬'>(`customSize_${idSuffix}`, '小型犬');
 
-  const [starterSetCost, setStarterSetCost] = useLocalStorage<number>(`starterSetCost_${idSuffix}`, 50000);
-  const [snackCost, setSnackCost] = useLocalStorage<number>(`snackCost_${idSuffix}`, 3000);
-  const [hotelCost, setHotelCost] = useLocalStorage<number>(`hotelCost_${idSuffix}`, 0);
-  const [trainingCost, setTrainingCost] = useLocalStorage<number>(`trainingCost_${idSuffix}`, 0);
-  const [toiletSheetCost, setToiletSheetCost] = useLocalStorage<number>(`toiletSheetCost_${idSuffix}`, 1500);
-  const [acCost, setAcCost] = useLocalStorage<number>(`acCost_${idSuffix}`, 3000);
-  const [hasSpayNeuter, setHasSpayNeuter] = useLocalStorage<boolean>(`hasSpayNeuter_${idSuffix}`, true);
-  const [hasAnnualCheckup, setHasAnnualCheckup] = useLocalStorage<boolean>(`hasAnnualCheckup_${idSuffix}`, false);
+  const [dogName, setDogName] = useUrlSyncedState<string>(`dogName_${idSuffix}`, '');
+  const [areaScale, setAreaScale] = useUrlSyncedState<number>(`areaScale_${idSuffix}`, 1.0); // 都市部1.1, 地方1.0
+  const [housingType, setHousingType] = useUrlSyncedState<string>(`housingType_${idSuffix}`, 'owned'); // owned: 持ち家, rental: 賃貸
+
+  const [starterSetCost, setStarterSetCost] = useUrlSyncedState<number>(`starterSetCost_${idSuffix}`, 50000);
+  const [snackCost, setSnackCost] = useUrlSyncedState<number>(`snackCost_${idSuffix}`, 3000);
+  const [hotelCost, setHotelCost] = useUrlSyncedState<number>(`hotelCost_${idSuffix}`, 0);
+  const [trainingCost, setTrainingCost] = useUrlSyncedState<number>(`trainingCost_${idSuffix}`, 0);
+  const [toiletSheetCost, setToiletSheetCost] = useUrlSyncedState<number>(`toiletSheetCost_${idSuffix}`, 1500);
+  const [acCost, setAcCost] = useUrlSyncedState<number>(`acCost_${idSuffix}`, 3000);
+  const [hasSpayNeuter, setHasSpayNeuter] = useUrlSyncedState<boolean>(`hasSpayNeuter_${idSuffix}`, true);
+  const [hasAnnualCheckup, setHasAnnualCheckup] = useUrlSyncedState<boolean>(`hasAnnualCheckup_${idSuffix}`, false);
 
   const resultRef = useRef<HTMLElement>(null);
 
@@ -438,14 +528,29 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
   const spayNeuterCost = hasSpayNeuter ? 40000 : 0;
   const initialCost = activePrice + starterSetCost + trainingCost + spayNeuterCost;
 
+  // 病気リスクの期待値計算 (生涯かかる治療費の期待値を年割にする)
+  // (治療費 * 発症確率) / 寿命
+  let annualDiseaseExpected = 0;
+  breed.diseases.forEach(d => {
+    // 保険加入時は自己負担額を3割（70%補償）と仮定して計算
+    const patientCost = hasInsurance ? d.cost * 0.3 : d.cost;
+    annualDiseaseExpected += (patientCost * d.probability) / activeLifespan;
+  });
+  // 地域物価を適用
+  annualDiseaseExpected = annualDiseaseExpected * areaScale;
+
+  // 賃貸の場合は、退去時の壁紙や床の修繕費として年間3万円積み立てる計算
+  const annualHousingMaintenance = housingType === 'rental' ? 30000 : 0;
+
   // 2. 基本の年間費用 (シニア期以外)
-  // - 食費・日用品・光熱費
-  const annualFoodAndGoods = (breed.monthlyFood + snackCost + toiletSheetCost + acCost) * 12;
-  // - 美容・お世話
-  const annualCare = (breed.trimmingCost * trimmingFrequency) + hotelCost;
+  // - 食費・日用品・光熱費 (物価係数を適用)
+  const annualFoodAndGoods = ((breed.monthlyFood + snackCost + toiletSheetCost + acCost) * 12) * areaScale;
+  // - 美容・お世話 (物価係数を適用)
+  const annualCare = ((breed.trimmingCost * trimmingFrequency) + hotelCost) * areaScale + annualHousingMaintenance;
   // - 医療・保険 (ワクチン + 予防薬 + 保険 + 定期健診)
-  const annualCheckupCost = hasAnnualCheckup ? 20000 : 0;
-  const annualMedical = VACCINE_COST + PREVENTION_COST[activeSize] + annualCheckupCost + (hasInsurance ? INSURANCE_MONTHLY * 12 : 0);
+  const annualCheckupCost = hasAnnualCheckup ? 20000 * areaScale : 0;
+  // 医療費は病気期待値をプラスする
+  const annualMedical = (VACCINE_COST + PREVENTION_COST[activeSize]) * areaScale + annualCheckupCost + (hasInsurance ? INSURANCE_MONTHLY * 12 : 0) + annualDiseaseExpected;
 
   const normalAnnualCost = annualFoodAndGoods + annualCare + annualMedical;
 
@@ -460,7 +565,8 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
     const isSenior = year >= SENIOR_AGE_START;
     const medicalMultiplier = isSenior ? SENIOR_MEDICAL_MULTIPLIER : 1;
 
-    const currentYearMedical = annualMedical * medicalMultiplier;
+    // シニア期はベースの医療費に加えて、病気期待値そのものも1.5倍にするロジックをより明確に
+    const currentYearMedical = (annualMedical - annualDiseaseExpected) * medicalMultiplier + (annualDiseaseExpected * medicalMultiplier);
 
     totalFoodAndGoods += annualFoodAndGoods;
     totalCare += annualCare;
@@ -499,8 +605,8 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
   return (
     <div className="w-full flex flex-col gap-6">
       {/* Step 1: Breed Selection */}
-        <section className="bg-white p-5 rounded-3xl shadow-sm border-2 border-orange-100">
-          <h2 className="text-lg font-bold mb-3 flex items-center gap-2 text-orange-600">
+        <section className="dark:bg-gray-800 bg-white p-5 rounded-3xl shadow-sm border-2 dark:border-gray-700 border-orange-100 transition-colors">
+          <h2 className="text-lg font-bold mb-3 flex items-center gap-2 dark:text-orange-400 text-orange-600">
             <span className="text-2xl">🔍</span> 1. 犬種をえらぶ
           </h2>
 
@@ -535,7 +641,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
 
                 return (
                   <div key={sizeCategory} className="mb-3">
-                    <h3 className="text-xs font-extrabold text-pink-600 bg-pink-50 px-3 py-1.5 rounded-full mb-3 inline-block shadow-sm">
+                    <h3 className="text-xs font-extrabold dark:text-pink-400 text-pink-600 dark:bg-pink-900/30 bg-pink-50 px-3 py-1.5 rounded-full mb-3 inline-block shadow-sm transition-colors">
                       ✨ {sizeCategory}
                     </h3>
                     <div className="flex flex-col gap-2">
@@ -543,7 +649,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
                         <label
                           key={b.id}
                           className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                            selectedBreedId === b.id ? 'border-orange-400 bg-orange-50 shadow-md transform scale-[1.02]' : 'border-orange-100 bg-white hover:bg-orange-50 hover:border-orange-200'
+                            selectedBreedId === b.id ? 'dark:border-orange-500 border-orange-400 dark:bg-orange-900/20 bg-orange-50 shadow-md transform scale-[1.02]' : 'dark:border-gray-700 border-orange-100 dark:bg-gray-800 bg-white dark:hover:bg-gray-700 hover:bg-orange-50 hover:border-orange-200'
                           }`}
                         >
                           <div className="flex items-start gap-3">
@@ -557,9 +663,9 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
                             />
                             <div className="flex-1">
                               <div className="flex justify-between items-center mb-1">
-                                <div className="font-extrabold text-gray-800 text-base">{b.name}</div>
+                                <div className="font-extrabold dark:text-gray-200 text-gray-800 text-base">{b.name}</div>
                               </div>
-                              <div className="text-xs text-gray-600 leading-relaxed mb-2">{b.description}</div>
+                              <div className="text-xs dark:text-gray-400 text-gray-600 leading-relaxed mb-2">{b.description}</div>
                               <div className="flex flex-wrap gap-1.5">
                                 {b.tags.map(tag => (
                                   <span key={tag} className="text-[10px] font-bold bg-white border border-pink-200 text-pink-500 px-2 py-0.5 rounded-full shadow-sm">
@@ -607,11 +713,55 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
           </div>
         </section>
 
+        {/* 新しいセクション: ワンちゃんの情報と居住環境 */}
+        <section className="dark:bg-gray-800 bg-white p-5 rounded-3xl shadow-sm border-2 dark:border-gray-700 border-orange-100 transition-colors">
+          <h2 className="text-lg font-bold mb-4 dark:text-orange-400 text-orange-600 flex items-center gap-2">
+            <span className="text-2xl">📛</span> {isCustom ? '2.' : '2.'} ワンちゃんの情報と環境
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium dark:text-gray-300 text-gray-700 mb-2">お名前（任意）</h3>
+              <input
+                type="text"
+                placeholder="例: ポチ、ココ..."
+                value={dogName}
+                onChange={(e) => setDogName(e.target.value)}
+                className="w-full p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-sm font-medium dark:text-gray-300 text-gray-700 mb-2">お住まいの地域</h3>
+                <select
+                  value={areaScale}
+                  onChange={(e) => setAreaScale(Number(e.target.value))}
+                  className="w-full p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-sm bg-white transition-colors"
+                >
+                  <option value={1.0}>地方・郊外 (標準)</option>
+                  <option value={1.1}>都市部 (物価高め)</option>
+                </select>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">住居タイプ</h3>
+                <select
+                  value={housingType}
+                  onChange={(e) => setHousingType(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"
+                >
+                  <option value="owned">持ち家</option>
+                  <option value="rental">賃貸 (修繕費を加算)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* カスタム設定 (ミックス・保護犬選択時のみ表示) */}
         {isCustom && (
           <section className="bg-green-50 p-5 rounded-3xl shadow-sm border-2 border-green-200">
             <h2 className="text-lg font-bold mb-4 text-green-700 flex items-center gap-2">
-              <span className="text-2xl">✏️</span> 2. カスタム情報の設定
+              <span className="text-2xl">✏️</span> 3. カスタム情報の設定
             </h2>
             <div className="space-y-5">
               <div>
@@ -655,10 +805,10 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
           </section>
         )}
 
-        {/* Step 2: Environment Settings */}
-        <section className="bg-white p-5 rounded-3xl shadow-sm border-2 border-orange-100">
-          <h2 className="text-lg font-bold mb-5 flex items-center gap-2 text-orange-600">
-            <span className="text-2xl">🏡</span> {isCustom ? '3.' : '2.'} お世話オプションをえらぶ
+        {/* Step 3: Environment Settings */}
+        <section className="dark:bg-gray-800 bg-white p-5 rounded-3xl shadow-sm border-2 dark:border-gray-700 border-orange-100 transition-colors">
+          <h2 className="text-lg font-bold mb-5 flex items-center gap-2 dark:text-orange-400 text-orange-600">
+            <span className="text-2xl">🏡</span> {isCustom ? '4.' : '3.'} お世話オプションをえらぶ
           </h2>
 
           <div className="space-y-5">
@@ -846,14 +996,15 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
           </div>
         </section>
 
-        {/* Step 3: Result */}
-        <section ref={resultRef} className="bg-gradient-to-b from-white to-orange-50 p-6 rounded-3xl shadow-lg border-4 border-orange-300 flex flex-col gap-4 relative overflow-hidden">
+        {/* Step 4: Result */}
+        <section ref={resultRef} className="dark:from-gray-800 dark:to-gray-900 bg-gradient-to-b from-white to-orange-50 p-6 rounded-3xl shadow-lg border-4 dark:border-gray-700 border-orange-300 flex flex-col gap-4 relative overflow-hidden transition-colors">
           <div className="absolute -top-10 -right-10 text-9xl opacity-5 transform rotate-12" data-html2canvas-ignore>💰</div>
           <div className="relative z-10">
-            <h2 className="text-center text-sm font-extrabold text-orange-600 mb-2 bg-orange-100 inline-block px-4 py-1 rounded-full mx-auto block w-fit">
-              ✨ 概算生涯費用（推定寿命: {activeLifespan}年） ✨
+            <h2 className="text-center text-sm font-extrabold dark:text-orange-400 text-orange-600 mb-2 dark:bg-gray-800 bg-orange-100 inline-block px-4 py-1 rounded-full mx-auto block w-fit transition-colors">
+              ✨ {dogName ? `${dogName}ちゃん` : breed.name} の概算生涯費用 ✨
             </h2>
-            <div className="text-center mt-4 mb-2">
+            <p className="text-center text-xs dark:text-gray-400 text-gray-500 font-bold mb-1">推定寿命: {activeLifespan}年</p>
+            <div className="text-center mt-2 mb-2">
               <span className="text-5xl font-black text-pink-500 tracking-tight drop-shadow-sm">{formatCurrency(lifetimeCost)}</span>
             </div>
           </div>
@@ -870,7 +1021,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
                     <XAxis dataKey="age" tick={{ fontSize: 10 }} tickMargin={5} />
                     <YAxis tickFormatter={(val) => `${val / 10000}万`} tick={{ fontSize: 10 }} />
                     <BarTooltip
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value: any) => formatCurrency(Number(value) || 0)}
                       labelStyle={{ color: '#374151', fontWeight: 'bold' }}
                     />
                     <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px' }} />
@@ -902,7 +1053,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
                       <Cell fill="#34d399" /> {/* 美容・お世話 */}
                       <Cell fill="#fbbf24" /> {/* 医療・保険 */}
                     </Pie>
-                    <PieTooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <PieTooltip formatter={(value: any) => formatCurrency(Number(value) || 0)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                     <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} iconType="circle" />
                   </PieChart>
                 </ResponsiveContainer>
@@ -910,26 +1061,64 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
             </div>
           </div>
 
-          <div className="bg-white/80 rounded-2xl p-5 space-y-4 mt-4 text-sm shadow-sm border border-white">
-            <div className="flex justify-between items-center border-b border-orange-100 pb-3">
-              <span className="text-gray-600 font-bold flex items-center gap-2"><span className="text-lg">🎁</span>初期費用</span>
-              <span className="font-black text-gray-800 text-lg">{formatCurrency(initialCost)}</span>
+          <div className="dark:bg-gray-800 bg-white/80 rounded-2xl p-5 space-y-4 mt-4 text-sm shadow-sm border dark:border-gray-700 border-white transition-colors">
+            <div className="flex justify-between items-center border-b dark:border-gray-700 border-orange-100 pb-3 transition-colors">
+              <span className="dark:text-gray-300 text-gray-600 font-bold flex items-center gap-2"><span className="text-lg">🎁</span>初期費用</span>
+              <span className="font-black dark:text-gray-100 text-gray-800 text-lg">{formatCurrency(initialCost)}</span>
             </div>
-            <div className="flex justify-between items-center border-b border-orange-100 pb-3">
-              <span className="text-gray-600 font-bold flex items-center gap-2"><span className="text-lg">🌱</span>年間費用 (若年期)</span>
-              <span className="font-black text-gray-800 text-lg">{formatCurrency(normalAnnualCost)}</span>
+            <div className="flex justify-between items-center border-b dark:border-gray-700 border-orange-100 pb-3 transition-colors">
+              <span className="dark:text-gray-300 text-gray-600 font-bold flex items-center gap-2"><span className="text-lg">🌱</span>年間費用 (若年期)</span>
+              <span className="font-black dark:text-gray-100 text-gray-800 text-lg">{formatCurrency(normalAnnualCost)}</span>
             </div>
             <div className="flex justify-between items-center pt-1">
-              <span className="text-gray-600 font-bold flex items-center gap-2"><span className="text-lg">🍂</span>年間費用 (シニア期7歳~)</span>
+              <span className="dark:text-gray-300 text-gray-600 font-bold flex items-center gap-2"><span className="text-lg">🍂</span>年間費用 (シニア期7歳~)</span>
               <span className="font-black text-pink-500 text-lg">{formatCurrency(normalAnnualCost + (annualMedical * (SENIOR_MEDICAL_MULTIPLIER - 1)))}</span>
             </div>
           </div>
-          <p className="text-[10px] text-orange-600/70 mt-3 text-center font-bold">
+          <p className="text-[10px] dark:text-orange-400/80 text-orange-600/70 mt-3 text-center font-bold">
             ※シニア期は医療・保険カテゴリの費用が1.5倍になる想定で計算しています。
           </p>
 
+          {/* 新しいセクション: 病気リスクとTips */}
+          {!isCustom && breed.diseases.length > 0 && (
+            <div className="mt-4 p-4 dark:bg-red-900/30 bg-red-50 rounded-2xl border dark:border-red-800 border-red-100">
+              <h3 className="text-sm font-bold dark:text-red-400 text-red-600 mb-3 flex items-center gap-2">
+                <span className="text-lg">🏥</span> かかりやすい病気とリスク
+              </h3>
+              <ul className="space-y-3 mb-4">
+                {breed.diseases.map((d, i) => (
+                  <li key={i} className="text-xs dark:text-red-200 text-red-800 bg-white/50 dark:bg-black/20 p-2 rounded-lg flex justify-between items-center">
+                    <span className="font-bold">{d.name}</span>
+                    <span className="text-right">
+                      <span className="block text-[10px] opacity-80">生涯発症率: {d.probability * 100}%</span>
+                      <span className="font-black">{formatCurrency(d.cost)}~</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {breed.tips.map((tip, i) => (
+                <p key={i} className="text-xs dark:text-red-300 text-red-700 font-bold leading-relaxed flex items-start gap-1.5">
+                  <span className="mt-0.5">💡</span> {tip}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* URL共有ボタン追加 */}
+          <div className="mt-5 flex justify-center relative z-10" data-html2canvas-ignore>
+             <button
+               onClick={() => {
+                 navigator.clipboard.writeText(window.location.href);
+                 alert('この結果のURLをコピーしました！');
+               }}
+               className="text-xs font-bold dark:text-blue-400 text-blue-600 underline hover:opacity-80 flex items-center gap-1"
+             >
+               🔗 このシミュレーション結果のURLをコピーして共有する
+             </button>
+          </div>
+
           {/* アクションボタン群 */}
-          <div className="mt-5 flex flex-col sm:flex-row justify-center gap-3 relative z-10" data-html2canvas-ignore>
+          <div className="mt-3 flex flex-col sm:flex-row justify-center gap-3 relative z-10" data-html2canvas-ignore>
             <button
               onClick={handleDownloadImage}
               className="bg-orange-500 text-white text-sm font-extrabold py-3 px-6 rounded-full flex items-center justify-center gap-2 hover:bg-orange-600 transition-transform active:scale-95 shadow-md flex-1"
@@ -953,13 +1142,29 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
 }
 
 export default function App() {
-  const [isCompareMode, setIsCompareMode] = useLocalStorage<boolean>('isCompareMode', false);
+  const [isCompareMode, setIsCompareMode] = useUrlSyncedState<boolean>('isCompareMode', false);
+  const [isDarkMode, setIsDarkMode] = useUrlSyncedState<boolean>('isDarkMode', false);
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   return (
-    <div className="min-h-screen bg-orange-50 flex flex-col items-center font-sans text-gray-800">
-      <header className="w-full bg-gradient-to-r from-orange-400 to-pink-400 text-white p-5 shadow-md text-center rounded-b-3xl sticky top-0 z-50">
-        <h1 className="text-2xl font-extrabold tracking-wide drop-shadow-md">🐶 ワンコお迎えコスト計算機 🐾</h1>
-        <p className="text-xs font-medium mt-1 opacity-90">〜うちの子にどれくらいかかる？〜</p>
+    <div className={`min-h-screen flex flex-col items-center font-sans ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-orange-50 text-gray-800'} transition-colors duration-300`}>
+      <header className="w-full bg-gradient-to-r from-orange-400 to-pink-400 text-white p-5 shadow-md text-center rounded-b-3xl sticky top-0 z-50 relative">
+        <button
+          onClick={() => setIsDarkMode(!isDarkMode)}
+          className="absolute right-4 top-4 bg-white/20 hover:bg-white/30 rounded-full p-2 transition-colors z-10"
+          title={isDarkMode ? 'ライトモードにする' : 'ダークモードにする'}
+        >
+          {isDarkMode ? '☀️' : '🌙'}
+        </button>
+        <h1 className="text-2xl font-extrabold tracking-wide drop-shadow-md mt-2 md:mt-0 relative z-0">🐶 ワンコお迎えコスト計算機 🐾</h1>
+        <p className="text-xs font-medium mt-1 opacity-90 relative z-0">〜うちの子にどれくらいかかる？〜</p>
       </header>
 
       <div className="w-full max-w-4xl p-4 mt-2 flex justify-end">
