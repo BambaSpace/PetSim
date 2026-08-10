@@ -244,6 +244,81 @@ const DOG_BREEDS: DogBreed[] = [
     weight: '2〜3kg',
     walkingTime: '1日30分程度'
   },
+  {
+    id: 'cavalier',
+    name: 'キャバリア・キング・チャールズ・スパニエル',
+    diseases: [ { name: "僧帽弁閉鎖不全症", probability: 0.8, cost: 500000 }, { name: "外耳炎", probability: 0.5, cost: 60000 } ],
+    tips: ['心臓病（僧帽弁閉鎖不全症）の遺伝的リスクが非常に高いため、ペット保険の加入は必須レベルです。'],
+    price: 300000,
+    lifespan: 11,
+    monthlyFood: 6000,
+    trimmingCost: 6000,
+    description: '大きな垂れ耳と優しい性格が魅力。争いを好まない癒し系ですが、心臓疾患には要注意。',
+    size: '小型犬',
+    tags: ['ファミリー向け', '穏やか', '抜け毛多い'],
+    weight: '6〜8kg',
+    walkingTime: '1日40分程度'
+  },
+  {
+    id: 'bichon',
+    name: 'ビション・フリーゼ',
+    diseases: [ { name: "皮膚炎", probability: 0.4, cost: 100000 }, { name: "尿石症", probability: 0.2, cost: 150000 } ],
+    tips: ['真っ白なアフロヘアを維持するには毎月のトリミングが必須。美容代は高めに見積もっておきましょう。'],
+    price: 400000,
+    lifespan: 14,
+    monthlyFood: 5000,
+    trimmingCost: 9000,
+    description: '綿あめのようなボリュームのある被毛。陽気で人なつっこく、抜け毛や体臭が少ない。',
+    size: '小型犬',
+    tags: ['抜け毛少ない', '活発'],
+    weight: '5〜7kg',
+    walkingTime: '1日30分程度'
+  },
+  {
+    id: 'jack-russell',
+    name: 'ジャック・ラッセル・テリア',
+    diseases: [ { name: "膝蓋骨脱臼（パテラ）", probability: 0.3, cost: 250000 }, { name: "白内障", probability: 0.2, cost: 200000 } ],
+    tips: ['小型犬ですが大型犬並みの運動量が必要です。十分な散歩でストレスを減らすことが問題行動や病気の予防に繋がります。'],
+    price: 250000,
+    lifespan: 14,
+    monthlyFood: 6000,
+    trimmingCost: 0, // スムース〜ラフまで毛種によるが平均して安価
+    description: '無尽蔵のスタミナを持つ小型のアスリート。非常に賢いが、しつけと十分な運動が不可欠。',
+    size: '小型犬',
+    tags: ['運動量非常に多い', '活発', '上級者向け'],
+    weight: '5〜6kg',
+    walkingTime: '1日1時間以上'
+  },
+  {
+    id: 'pekingese',
+    name: 'ペキニーズ',
+    diseases: [ { name: "椎間板ヘルニア", probability: 0.3, cost: 400000 }, { name: "短頭種気道症候群", probability: 0.4, cost: 200000 } ],
+    tips: ['ヘルニア予防のため、抱っこの仕方や段差に注意。夏場は24時間エアコン稼働が必須なので電気代がかかります。'],
+    price: 300000,
+    lifespan: 13,
+    monthlyFood: 5000,
+    trimmingCost: 6000,
+    description: '獅子のようなたてがみを持つマイペースな犬種。運動量は少なめでよいが、暑さに非常に弱い。',
+    size: '小型犬',
+    tags: ['運動量少なめ', 'マイペース', '抜け毛多い'],
+    weight: '4〜5kg',
+    walkingTime: '1日20分程度'
+  },
+  {
+    id: 'min-pin',
+    name: 'ミニチュア・ピンシャー',
+    diseases: [ { name: "レッグ・ペルテス病", probability: 0.15, cost: 300000 }, { name: "皮膚疾患（脱毛症等）", probability: 0.2, cost: 80000 } ],
+    tips: ['短毛でお手入れは楽ですが、極端に寒さに弱いため、冬場の暖房費や防寒着のコストがかかります。'],
+    price: 250000,
+    lifespan: 14,
+    monthlyFood: 4000,
+    trimmingCost: 0,
+    description: 'ドーベルマンの小型版のような精悍な姿。好奇心旺盛で活発だが、寒さに弱く骨が細い。',
+    size: '小型犬',
+    tags: ['抜け毛少ない', '活発'],
+    weight: '4〜5kg',
+    walkingTime: '1日40分程度'
+  },
 
   // --- 中型犬 ---
   {
@@ -1240,8 +1315,25 @@ export default function App() {
 
         </section>
 
+      {/* Google AdSense Area (準備用プレースホルダー) */}
+      <section className="w-full max-w-lg px-4 mb-8">
+        <div className="w-full h-[100px] md:h-[250px] bg-gray-200 dark:bg-gray-800 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700">
+          <p className="text-gray-400 dark:text-gray-500 text-sm font-bold text-center">
+            [Google AdSense 広告エリア]<br/>
+            <span className="text-xs font-normal">※ 審査通過後にここに広告が表示されます</span>
+          </p>
+          {/* 実際の広告タグの例 (審査通過後に使用) */}
+          {/* <ins className="adsbygoogle"
+               style={{ display: 'block' }}
+               data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+               data-ad-slot="YYYYYYYYYY"
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins> */}
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="w-full bg-orange-100 p-6 mt-auto text-center">
+      <footer className="w-full bg-orange-100 dark:bg-gray-800 p-6 mt-auto text-center transition-colors">
         <p className="text-xs text-orange-800 font-bold opacity-70">
           © {new Date().getFullYear()} ワンコお迎えコスト計算機
         </p>
