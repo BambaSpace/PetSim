@@ -1,15 +1,13 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Quiz and URL encoding tests', () => {
-  test('should display quiz and allow selection', async ({ page }) => {
-    // Navigate to local dev server
+test.describe('Quiz behavior test', () => {
+  test('should show multiple top results and allow user to choose', async ({ page }) => {
     await page.goto('http://localhost:5173');
 
     // Open quiz
     await page.getByRole('button', { name: /迷ったらこれ！ワンコ相性診断/ }).click();
-    await expect(page.getByText('休日の過ごし方は？')).toBeVisible();
 
-    // Answer 8 questions
+    // Answer questions
     await page.getByRole('button', { name: '外でアクティブに遊びたい！' }).click();
     await page.getByRole('button', { name: 'なるべく手間がかからない方がいい' }).click();
     await page.getByRole('button', { name: '一戸建て（お庭がある、広い）' }).click();
@@ -19,13 +17,15 @@ test.describe('Quiz and URL encoding tests', () => {
     await page.getByRole('button', { name: '1万円程度まで（なるべく抑えたい）' }).click();
     await page.getByRole('button', { name: '抱っこしやすい小型犬' }).click();
 
-    // Result screen
+    // Result screen should have multiple elements with text '位'
     await expect(page.getByText('🎉 診断完了！')).toBeVisible();
+    const rankElements = await page.locator('text=/\\d+位/').count();
+    expect(rankElements).toBe(3); // Expecting top 3 results
 
-    // Click "これで計算する" on the first recommendation
-    await page.getByRole('button', { name: 'これで計算する' }).first().click();
+    // We can select the second one for instance
+    await page.getByRole('button', { name: 'これで計算する' }).nth(1).click();
 
-    // Verify modal closed
+    // Modal should be closed
     await expect(page.getByText('🎉 診断完了！')).not.toBeVisible();
   });
 });

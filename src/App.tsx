@@ -606,50 +606,9 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
   const [hasSpayNeuter, setHasSpayNeuter] = useUrlSyncedState<boolean>(`hasSpayNeuter_${idSuffix}`, true);
   const [hasAnnualCheckup, setHasAnnualCheckup] = useUrlSyncedState<boolean>(`hasAnnualCheckup_${idSuffix}`, false);
 
-  // 診断機能用の状態
-  const [showQuiz, setShowQuiz] = useState<boolean>(false);
-  const [quizAnswers, setQuizAnswers] = useState<string[]>([]);
   const resultRef = useRef<HTMLElement>(null);
   const settingsRef = useRef<HTMLElement>(null);
 
-  // 診断の質問データ
-  const QUIZ_QUESTIONS = [
-    { text: "休日の過ごし方は？", options: [{ label: "アウトドア派！外でアクティブに遊ぶ", score: 'active' }, { label: "インドア派！家でのんびり過ごす", score: 'indoor' }] },
-    { text: "ブラッシングなどの毎日のお手入れは？", options: [{ label: "面倒見が良いので苦にならない", score: 'care_ok' }, { label: "なるべく手間がかからない方がいい", score: 'care_no' }] },
-    { text: "お住まいの環境は？", options: [{ label: "マンション・アパート（スペース限られる）", score: 'small' }, { label: "一戸建て（お庭があったり広い）", score: 'large' }] }
-  ];
-
-  const handleQuizAnswer = (optionScore: string) => {
-    const newAnswers = [...quizAnswers, optionScore];
-    setQuizAnswers(newAnswers);
-
-    if (newAnswers.length === QUIZ_QUESTIONS.length) {
-      // 診断ロジック（簡易版）
-      let recommendedId = 'toy-poodle'; // デフォルト
-
-      const isIndoor = newAnswers.includes('indoor');
-      const isCareNo = newAnswers.includes('care_no');
-      const isSmall = newAnswers.includes('small');
-
-      if (isIndoor && isCareNo && isSmall) recommendedId = 'chihuahua';
-      else if (isIndoor && !isCareNo && isSmall) recommendedId = 'shih-tzu';
-      else if (!isIndoor && !isCareNo && !isSmall) recommendedId = 'golden';
-      else if (!isIndoor && isCareNo && !isSmall) recommendedId = 'shiba';
-      else if (!isIndoor && isCareNo && isSmall) recommendedId = 'jack-russell';
-      else if (isIndoor && !isCareNo && !isSmall) recommendedId = 'bernese';
-      else if (!isIndoor && !isCareNo && isSmall) recommendedId = 'toy-poodle';
-
-      setSelectedBreedId(recommendedId);
-      setShowQuiz(false);
-      setQuizAnswers([]);
-
-      // 設定エリアへスクロール
-      setTimeout(() => {
-        settingsRef.current?.scrollIntoView({ behavior: 'smooth' });
-        alert('あなたにピッタリの犬種が選択されました！✨');
-      }, 500);
-    }
-  };
 
   const handleDownloadImage = async () => {
     if (!resultRef.current) return;
@@ -747,7 +706,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
   };
 
   const filteredBreeds = DOG_BREEDS.filter((b) => {
-    const matchSearch = searchQuery === '' || b.name.includes(searchQuery) || b.description.includes(searchQuery);
+    const matchSearch = searchQuery === '' || b.name.includes(searchQuery) || b.description.includes(searchQuery) || b.tags.some(tag => tag.includes(searchQuery));
     const matchTag = selectedTag === '' || b.tags.includes(selectedTag);
     const matchSize = selectedSize === 'all' || b.size === selectedSize;
     return matchSearch && matchTag && matchSize;
@@ -755,40 +714,6 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
 
   return (
     <div className="w-full flex flex-col gap-6">
-
-      {/* お楽しみ機能: わんこ診断 */}
-      <section className="dark:bg-indigo-900/30 bg-indigo-50 p-5 rounded-3xl shadow-sm border-2 dark:border-indigo-800 border-indigo-200 transition-colors">
-        {!showQuiz ? (
-          <div className="text-center">
-            <h2 className="text-lg font-black dark:text-indigo-300 text-indigo-700 mb-2">🐾 迷ったらこれ！ワンコ相性診断 🐾</h2>
-            <p className="text-xs dark:text-indigo-200/80 text-indigo-600/80 font-bold mb-4">3つの質問に答えて、あなたにピッタリの犬種を見つけよう！</p>
-            <button
-              onClick={() => setShowQuiz(true)}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white font-extrabold py-2 px-6 rounded-full transition-transform active:scale-95 shadow-md"
-            >
-              診断をスタート！
-            </button>
-          </div>
-        ) : (
-          <div className="text-center">
-            <h3 className="text-sm font-bold dark:text-indigo-300 text-indigo-700 mb-4">
-              Q{quizAnswers.length + 1}. {QUIZ_QUESTIONS[quizAnswers.length].text}
-            </h3>
-            <div className="flex flex-col gap-3 max-w-sm mx-auto">
-              {QUIZ_QUESTIONS[quizAnswers.length].options.map((opt, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleQuizAnswer(opt.score)}
-                  className="bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 text-indigo-900 border-2 border-indigo-100 py-3 px-4 rounded-xl font-bold text-sm hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-            <button onClick={() => {setShowQuiz(false); setQuizAnswers([]);}} className="mt-4 text-[10px] text-gray-400 underline">やめる</button>
-          </div>
-        )}
-      </section>
 
       {/* Step 1: Breed Selection */}
         <section ref={settingsRef} className="dark:bg-gray-800 bg-white p-5 rounded-3xl shadow-sm border-2 dark:border-gray-700 border-orange-100 transition-colors">
@@ -1288,13 +1213,16 @@ export default function App() {
   const [quizAnswers, setQuizAnswers] = useState<string[]>([]);
   const [quizResult, setQuizResult] = useState<string[]>([]);
 
-  // 診断の質問データ
+  // 診断の質問データ（全8問）
   const QUIZ_QUESTIONS = [
     { text: "休日の過ごし方は？", options: [{ label: "外でアクティブに遊びたい！", score: 'active' }, { label: "家でのんびり過ごしたい", score: 'indoor' }] },
     { text: "ブラッシングなど、毎日のお手入れは？", options: [{ label: "面倒見が良いので苦にならない", score: 'care_ok' }, { label: "なるべく手間がかからない方がいい", score: 'care_no' }] },
     { text: "お住まいの環境は？", options: [{ label: "マンション・アパートなど", score: 'small' }, { label: "一戸建て（お庭がある、広い）", score: 'large' }] },
     { text: "ワンちゃんのお留守番の長さは？", options: [{ label: "あまりない（常に誰かいる）", score: 'stay_short' }, { label: "長い（共働きなどで日中は不在）", score: 'stay_long' }] },
-    { text: "犬を飼った経験はありますか？", options: [{ label: "ある！", score: 'exp_yes' }, { label: "はじめて！", score: 'exp_no' }] }
+    { text: "犬を飼った経験はありますか？", options: [{ label: "ある！", score: 'exp_yes' }, { label: "はじめて！", score: 'exp_no' }] },
+    { text: "あなたの性格を動物に例えると？", options: [{ label: "犬（人懐っこい・愛情深い）", score: 'char_dog' }, { label: "猫（マイペース・自立している）", score: 'char_cat' }] },
+    { text: "ワンちゃんにかかる毎月の費用、どのくらい許容できる？", options: [{ label: "1万円程度まで（なるべく抑えたい）", score: 'cost_low' }, { label: "2〜3万円以上（しっかりお金をかけられる）", score: 'cost_high' }] },
+    { text: "ワンちゃんのサイズ、理想は？", options: [{ label: "抱っこしやすい小型犬", score: 'size_small' }, { label: "存在感のある中型・大型犬", score: 'size_large' }] }
   ];
 
   const handleQuizAnswer = (optionScore: string) => {
@@ -1315,7 +1243,13 @@ export default function App() {
         stay_short: newAnswers.includes('stay_short'),
         stay_long: newAnswers.includes('stay_long'),
         exp_yes: newAnswers.includes('exp_yes'),
-        exp_no: newAnswers.includes('exp_no')
+        exp_no: newAnswers.includes('exp_no'),
+        char_dog: newAnswers.includes('char_dog'),
+        char_cat: newAnswers.includes('char_cat'),
+        cost_low: newAnswers.includes('cost_low'),
+        cost_high: newAnswers.includes('cost_high'),
+        size_small: newAnswers.includes('size_small'),
+        size_large: newAnswers.includes('size_large')
       };
 
       DOG_BREEDS.forEach(b => {
@@ -1330,6 +1264,14 @@ export default function App() {
         if (ans.exp_no && b.tags.includes('初心者向け')) scores[b.id] += 3;
         if (ans.exp_no && b.tags.includes('上級者向け')) scores[b.id] -= 5;
         if (ans.exp_yes && b.tags.includes('上級者向け')) scores[b.id] += 2;
+
+        // 新しい質問のロジック
+        if (ans.char_dog && b.tags.includes('甘えん坊')) scores[b.id] += 2;
+        if (ans.char_cat && b.tags.includes('マイペース')) scores[b.id] += 2;
+        if (ans.cost_low && (b.monthlyFood < 10000 && b.trimmingCost === 0)) scores[b.id] += 3;
+        if (ans.cost_high && (b.monthlyFood >= 10000 || b.trimmingCost > 0)) scores[b.id] += 2;
+        if (ans.size_small && b.size === '小型犬') scores[b.id] += 3;
+        if (ans.size_large && (b.size === '中型犬' || b.size === '大型犬')) scores[b.id] += 3;
       });
 
       const sortedBreeds = Object.entries(scores)
