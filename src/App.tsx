@@ -586,6 +586,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
   const [trimmingFrequency, setTrimmingFrequency] = useUrlSyncedState<number>(`trimmingFrequency_${idSuffix}`, 12);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedTag, setSelectedTag] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string>('all');
 
   const [customPrice, setCustomPrice] = useUrlSyncedState<number>(`customPrice_${idSuffix}`, 0);
@@ -746,9 +747,10 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
   };
 
   const filteredBreeds = DOG_BREEDS.filter((b) => {
-    const matchSearch = b.name.includes(searchQuery) || b.description.includes(searchQuery) || b.tags.some(t => t.includes(searchQuery));
+    const matchSearch = searchQuery === '' || b.name.includes(searchQuery) || b.description.includes(searchQuery);
+    const matchTag = selectedTag === '' || b.tags.includes(selectedTag);
     const matchSize = selectedSize === 'all' || b.size === selectedSize;
-    return matchSearch && matchSize;
+    return matchSearch && matchTag && matchSize;
   });
 
   return (
@@ -822,9 +824,9 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
               {['一人暮らし向け', 'ファミリー向け', '抜け毛少ない', '活発', '運動量少なめ'].map((tag) => (
                 <button
                   key={tag}
-                  onClick={() => setSearchQuery(searchQuery === tag ? '' : tag)}
+                  onClick={() => setSelectedTag(selectedTag === tag ? '' : tag)}
                   className={`px-2 py-1 text-[10px] font-bold rounded-full border transition-colors ${
-                    searchQuery === tag ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                    selectedTag === tag ? 'bg-pink-500 text-white border-pink-500' : 'bg-white dark:bg-gray-700 dark:text-gray-200 text-gray-600 border-gray-300 dark:border-gray-600 hover:bg-gray-50'
                   }`}
                 >
                   {tag}
@@ -1281,15 +1283,18 @@ export default function App() {
   const [isCompareMode, setIsCompareMode] = useUrlSyncedState<boolean>('isCompareMode', false);
   const [isDarkMode, setIsDarkMode] = useUrlSyncedState<boolean>('isDarkMode', false);
 
-  // 診断機能用の状態 (Global level)
+  // 診断機能用の状態
   const [showQuiz, setShowQuiz] = useState<boolean>(false);
   const [quizAnswers, setQuizAnswers] = useState<string[]>([]);
+  const [quizResult, setQuizResult] = useState<string[]>([]);
 
   // 診断の質問データ
   const QUIZ_QUESTIONS = [
-    { text: "休日の過ごし方は？", options: [{ label: "アウトドア派！外でアクティブに遊ぶ", score: 'active' }, { label: "インドア派！家でのんびり過ごす", score: 'indoor' }] },
-    { text: "ブラッシングなどの毎日のお手入れは？", options: [{ label: "面倒見が良いので苦にならない", score: 'care_ok' }, { label: "なるべく手間がかからない方がいい", score: 'care_no' }] },
-    { text: "お住まいの環境は？", options: [{ label: "マンション・アパート（スペース限られる）", score: 'small' }, { label: "一戸建て（お庭があったり広い）", score: 'large' }] }
+    { text: "休日の過ごし方は？", options: [{ label: "外でアクティブに遊びたい！", score: 'active' }, { label: "家でのんびり過ごしたい", score: 'indoor' }] },
+    { text: "ブラッシングなど、毎日のお手入れは？", options: [{ label: "面倒見が良いので苦にならない", score: 'care_ok' }, { label: "なるべく手間がかからない方がいい", score: 'care_no' }] },
+    { text: "お住まいの環境は？", options: [{ label: "マンション・アパートなど", score: 'small' }, { label: "一戸建て（お庭がある、広い）", score: 'large' }] },
+    { text: "ワンちゃんのお留守番の長さは？", options: [{ label: "あまりない（常に誰かいる）", score: 'stay_short' }, { label: "長い（共働きなどで日中は不在）", score: 'stay_long' }] },
+    { text: "犬を飼った経験はありますか？", options: [{ label: "ある！", score: 'exp_yes' }, { label: "はじめて！", score: 'exp_no' }] }
   ];
 
   const handleQuizAnswer = (optionScore: string) => {
@@ -1297,39 +1302,62 @@ export default function App() {
     setQuizAnswers(newAnswers);
 
     if (newAnswers.length === QUIZ_QUESTIONS.length) {
-      // 診断結果はURL経由でAのシミュレーターに渡す（簡易的）
-      let recommendedId = 'toy-poodle'; // デフォルト
-      const isIndoor = newAnswers.includes('indoor');
-      const isCareNo = newAnswers.includes('care_no');
-      const isSmall = newAnswers.includes('small');
+      const scores: { [key: string]: number } = {};
+      DOG_BREEDS.forEach(b => scores[b.id] = 0);
 
-      if (isIndoor && isCareNo && isSmall) recommendedId = 'chihuahua';
-      else if (isIndoor && !isCareNo && isSmall) recommendedId = 'shih-tzu';
-      else if (!isIndoor && !isCareNo && !isSmall) recommendedId = 'golden';
-      else if (!isIndoor && isCareNo && !isSmall) recommendedId = 'shiba';
-      else if (!isIndoor && isCareNo && isSmall) recommendedId = 'jack-russell';
-      else if (isIndoor && !isCareNo && !isSmall) recommendedId = 'bernese';
-      else if (!isIndoor && !isCareNo && isSmall) recommendedId = 'toy-poodle';
+      const ans = {
+        active: newAnswers.includes('active'),
+        indoor: newAnswers.includes('indoor'),
+        care_ok: newAnswers.includes('care_ok'),
+        care_no: newAnswers.includes('care_no'),
+        small: newAnswers.includes('small'),
+        large: newAnswers.includes('large'),
+        stay_short: newAnswers.includes('stay_short'),
+        stay_long: newAnswers.includes('stay_long'),
+        exp_yes: newAnswers.includes('exp_yes'),
+        exp_no: newAnswers.includes('exp_no')
+      };
 
-      // URLを更新し、カスタムイベントを発火してSimulatorコンポーネントに通知する
-      try {
-        const key = 'selectedBreedId_A';
-        const searchParams = new URLSearchParams(window.location.search);
-        searchParams.set(key, btoa(encodeURIComponent(JSON.stringify(recommendedId))));
-        window.history.replaceState(null, '', `${window.location.pathname}?${searchParams.toString()}`);
+      DOG_BREEDS.forEach(b => {
+        if (ans.active && (b.tags.includes('活発') || b.tags.includes('運動量多い') || b.tags.includes('運動量非常に多い'))) scores[b.id] += 3;
+        if (ans.indoor && b.tags.includes('運動量少なめ')) scores[b.id] += 3;
+        if (ans.care_no && b.tags.includes('抜け毛少ない') && b.trimmingCost === 0) scores[b.id] += 3;
+        if (ans.care_ok && (b.tags.includes('抜け毛多い') || b.trimmingCost > 0)) scores[b.id] += 1;
+        if (ans.small && b.size === '小型犬') scores[b.id] += 3;
+        if (ans.large && (b.size === '大型犬' || b.size === '中型犬')) scores[b.id] += 2;
+        if (ans.stay_long && b.tags.includes('マイペース')) scores[b.id] += 2;
+        if (ans.stay_long && b.tags.includes('甘えん坊')) scores[b.id] -= 2;
+        if (ans.exp_no && b.tags.includes('初心者向け')) scores[b.id] += 3;
+        if (ans.exp_no && b.tags.includes('上級者向け')) scores[b.id] -= 5;
+        if (ans.exp_yes && b.tags.includes('上級者向け')) scores[b.id] += 2;
+      });
 
-        // ローカルストレージイベントをシミュレートしてフックを再レンダリングさせる
-        window.localStorage.setItem(key, JSON.stringify(recommendedId));
-        window.dispatchEvent(new Event('storage'));
-        // 独自イベントも発火
-        window.dispatchEvent(new CustomEvent('quizResult', { detail: recommendedId }));
-      } catch (e) {}
+      const sortedBreeds = Object.entries(scores)
+        .filter(([id]) => id !== 'custom-mix')
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(entry => entry[0]);
 
-      setShowQuiz(false);
-      setQuizAnswers([]);
-      alert('あなたにピッタリの犬種が選択されました！✨');
+      setQuizResult(sortedBreeds);
     }
   };
+
+  const selectBreedAndClose = (breedId: string) => {
+    try {
+      const key = 'selectedBreedId_A';
+      const searchParams = new URLSearchParams(window.location.search);
+      searchParams.set(key, btoa(encodeURIComponent(JSON.stringify(breedId))));
+      window.history.replaceState(null, '', `${window.location.pathname}?${searchParams.toString()}`);
+      window.localStorage.setItem(key, JSON.stringify(breedId));
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('quizResult', { detail: breedId }));
+    } catch (e) {}
+
+    setShowQuiz(false);
+    setQuizAnswers([]);
+    setQuizResult([]);
+  };
+
 
   useEffect(() => {
     if (isDarkMode) {
@@ -1345,23 +1373,53 @@ export default function App() {
       {showQuiz && (
         <div className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm flex items-center justify-center p-4">
           <div className="dark:bg-gray-800 bg-white p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-md relative animate-fade-in-up border-4 dark:border-indigo-500 border-indigo-300">
-            <div className="text-center">
-              <h3 className="text-sm font-bold dark:text-indigo-300 text-indigo-700 mb-4">
-                Q{quizAnswers.length + 1}. {QUIZ_QUESTIONS[quizAnswers.length].text}
-              </h3>
-              <div className="flex flex-col gap-3 max-w-sm mx-auto">
-                {QUIZ_QUESTIONS[quizAnswers.length].options.map((opt, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleQuizAnswer(opt.score)}
-                    className="bg-white dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 text-indigo-900 border-2 border-indigo-100 py-3 px-4 rounded-xl font-bold text-sm hover:bg-indigo-50 dark:hover:bg-gray-600 transition-colors shadow-sm"
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+
+            {quizResult.length > 0 ? (
+              <div className="text-center">
+                <h3 className="text-lg font-black dark:text-indigo-300 text-indigo-700 mb-2">🎉 診断完了！</h3>
+                <p className="text-xs dark:text-gray-300 text-gray-600 font-bold mb-5">あなたにぴったりのおすすめ犬種はこちら！</p>
+
+                <div className="flex flex-col gap-3 mb-5 text-left">
+                  {quizResult.map((breedId: string, index: number) => {
+                    const b = DOG_BREEDS.find(d => d.id === breedId);
+                    if (!b) return null;
+                    return (
+                      <div key={b.id} className="p-3 bg-indigo-50 dark:bg-gray-700 rounded-xl border border-indigo-100 dark:border-gray-600 flex justify-between items-center">
+                        <div>
+                          <span className="text-indigo-500 dark:text-indigo-400 font-black mr-2">{index + 1}位</span>
+                          <span className="font-extrabold text-gray-800 dark:text-gray-200 text-sm">{b.name}</span>
+                        </div>
+                        <button
+                          onClick={() => selectBreedAndClose(b.id)}
+                          className="bg-indigo-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-full hover:bg-indigo-600 transition-colors"
+                        >
+                          これで計算する
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button onClick={() => {setShowQuiz(false); setQuizAnswers([]); setQuizResult([]);}} className="text-xs text-gray-400 underline hover:text-gray-500">閉じる</button>
               </div>
-              <button onClick={() => {setShowQuiz(false); setQuizAnswers([]);}} className="mt-6 text-xs text-gray-400 underline hover:text-gray-500">やめる</button>
-            </div>
+            ) : (
+              <div className="text-center">
+                <h3 className="text-sm font-bold dark:text-indigo-300 text-indigo-700 mb-4">
+                  Q{quizAnswers.length + 1}. {QUIZ_QUESTIONS[quizAnswers.length].text}
+                </h3>
+                <div className="flex flex-col gap-3 max-w-sm mx-auto">
+                  {QUIZ_QUESTIONS[quizAnswers.length].options.map((opt, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleQuizAnswer(opt.score)}
+                      className="bg-white dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 text-indigo-900 border-2 border-indigo-100 py-3 px-4 rounded-xl font-bold text-sm hover:bg-indigo-50 dark:hover:bg-gray-600 transition-colors shadow-sm"
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => {setShowQuiz(false); setQuizAnswers([]);}} className="mt-6 text-xs text-gray-400 underline hover:text-gray-500">やめる</button>
+              </div>
+            )}
           </div>
         </div>
       )}
