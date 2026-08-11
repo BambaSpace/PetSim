@@ -6,12 +6,9 @@ import html2canvas from 'html2canvas';
 function useUrlSyncedState<T>(key: string, initialValue: T): [T, (value: T) => void] {
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
-      // 1. まずURLパラメータを確認
       const searchParams = new URLSearchParams(window.location.search);
       const urlValue = searchParams.get(key);
       if (urlValue !== null) {
-        // Base64デコード -> URIデコード -> JSONパース
-        // 古い非暗号化URLとの互換性のため、デコード失敗時は古い形式を試す
         try {
            const decoded = decodeURIComponent(atob(urlValue));
            return JSON.parse(decoded);
@@ -19,14 +16,41 @@ function useUrlSyncedState<T>(key: string, initialValue: T): [T, (value: T) => v
            return JSON.parse(decodeURIComponent(urlValue));
         }
       }
-      // 2. 次にLocalStorageを確認
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
     } catch (error) {
-      console.error(`Error reading ${key}:`, error);
       return initialValue;
     }
   });
+
+  // 外部からの更新（別コンポーネントからのURLやStorage変更）を検知する
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const urlValue = searchParams.get(key);
+        if (urlValue !== null) {
+          try {
+            setStoredValue(JSON.parse(decodeURIComponent(atob(urlValue))));
+            return;
+          } catch (e) {
+            setStoredValue(JSON.parse(decodeURIComponent(urlValue)));
+            return;
+          }
+        }
+        const item = window.localStorage.getItem(key);
+        if (item) setStoredValue(JSON.parse(item));
+      } catch (e) {}
+    };
+    window.addEventListener('storage', handleStorageChange);
+    // カスタムイベント用の検知
+    window.addEventListener('quizResult', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('quizResult', handleStorageChange);
+    };
+  }, [key]);
+
 
   const setValue = (value: T) => {
     try {
@@ -778,7 +802,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full p-3 md:p-2 border border-gray-300 rounded-lg text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap mb-2">
               {['all', '小型犬', '中型犬', '大型犬'].map((size) => (
                 <button
                   key={size}
@@ -788,6 +812,22 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
                   }`}
                 >
                   {size === 'all' ? '🐾 すべて' : size}
+                </button>
+              ))}
+            </div>
+
+            {/* 特徴タグのクイック検索 */}
+            <div className="flex gap-1.5 flex-wrap">
+              <span className="text-[10px] font-bold text-gray-500 py-1 mr-1">特徴:</span>
+              {['一人暮らし向け', 'ファミリー向け', '抜け毛少ない', '活発', '運動量少なめ'].map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => setSearchQuery(searchQuery === tag ? '' : tag)}
+                  className={`px-2 py-1 text-[10px] font-bold rounded-full border transition-colors ${
+                    searchQuery === tag ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {tag}
                 </button>
               ))}
             </div>
@@ -967,195 +1007,131 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
 
         {/* Step 3: Environment Settings */}
         <section className="dark:bg-gray-800 bg-white p-5 rounded-3xl shadow-sm border-2 dark:border-gray-700 border-orange-100 transition-colors">
-          <h2 className="text-lg font-bold mb-5 flex items-center gap-2 dark:text-orange-400 text-orange-600">
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2 dark:text-orange-400 text-orange-600">
             <span className="text-2xl">🏡</span> {isCustom ? '4.' : '3.'} お世話オプションをえらぶ
           </h2>
 
-          <div className="space-y-5">
-            {/* スターターセット (初期費用) */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2 flex justify-between">
-                <span>スターターセット (初期)</span>
-                <span className="text-xs text-gray-500">ケージ・ベッド等</span>
-              </h3>
-              <select
-                value={starterSetCost}
-                onChange={(e) => setStarterSetCost(Number(e.target.value))}
-                className="w-full p-3 md:p-2 border border-gray-300 rounded-lg text-base md:text-sm bg-white"
-              >
-                <option value={30000}>節約・最低限 (30,000円)</option>
-                <option value={50000}>普通 (50,000円)</option>
-                <option value={100000}>こだわり・高級 (100,000円)</option>
-              </select>
-            </div>
+          <div className="space-y-4">
 
-            {/* 保険 */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2 flex justify-between">
-                <span>ペット保険</span>
-                <span className="text-xs text-gray-500">月額3,000円</span>
-              </h3>
-              <div className="flex bg-gray-100 p-1 rounded-lg">
-                <button
-                  onClick={() => setHasInsurance(true)}
-                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${hasInsurance ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
-                >
-                  加入する
-                </button>
-                <button
-                  onClick={() => setHasInsurance(false)}
-                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${!hasInsurance ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
-                >
-                  加入しない
-                </button>
-              </div>
-            </div>
-
-            {/* トリミング */}
-            {breed.trimmingCost > 0 && (
+            {/* 常に表示する最重要項目（トリミング、保険） */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-orange-50 dark:bg-gray-700/50 p-4 rounded-2xl border border-orange-100 dark:border-gray-600">
+              {/* 保険 */}
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">トリミングの頻度</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: '毎月', value: 12 },
-                    { label: '2ヶ月に1回', value: 6 },
-                    { label: '行かない', value: 0 }
-                  ].map(option => (
-                    <label key={option.value} className={`flex flex-col items-center justify-center p-2 rounded-lg cursor-pointer border ${trimmingFrequency === option.value ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-gray-50 border-transparent text-gray-600 hover:bg-gray-100'}`}>
-                      <input
-                        type="radio"
-                        name="trimming"
-                        value={option.value}
-                        checked={trimmingFrequency === option.value}
-                        onChange={() => setTrimmingFrequency(option.value)}
-                        className="sr-only"
-                      />
-                      <span className="text-xs font-medium">{option.label}</span>
-                    </label>
-                  ))}
+                <h3 className="text-sm font-bold dark:text-gray-300 text-gray-700 mb-2 flex justify-between">
+                  <span>🏥 ペット保険</span>
+                  <span className="text-[10px] text-gray-500">月額3,000円</span>
+                </h3>
+                <div className="flex bg-gray-200/50 dark:bg-gray-900 p-1 rounded-xl">
+                  <button
+                    onClick={() => setHasInsurance(true)}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${hasInsurance ? 'bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500'}`}
+                  >
+                    加入する
+                  </button>
+                  <button
+                    onClick={() => setHasInsurance(false)}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${!hasInsurance ? 'bg-white dark:bg-gray-700 shadow text-gray-800 dark:text-gray-200' : 'text-gray-500'}`}
+                  >
+                    加入しない
+                  </button>
                 </div>
               </div>
-            )}
 
-            {/* おやつ・サプリ */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">おやつ・サプリ (月額)</h3>
-              <select
-                value={snackCost}
-                onChange={(e) => setSnackCost(Number(e.target.value))}
-                className="w-full p-3 md:p-2 border border-gray-300 rounded-lg text-base md:text-sm bg-white"
-              >
-                <option value={1000}>控えめ (1,000円/月)</option>
-                <option value={3000}>普通 (3,000円/月)</option>
-                <option value={5000}>たっぷり・高級 (5,000円/月)</option>
-              </select>
+              {/* トリミング */}
+              {breed.trimmingCost > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold dark:text-gray-300 text-gray-700 mb-2">✂️ トリミング頻度</h3>
+                  <div className="grid grid-cols-3 gap-1 bg-gray-200/50 dark:bg-gray-900 p-1 rounded-xl">
+                    {[
+                      { label: '毎月', value: 12 },
+                      { label: '2ヶ月に1回', value: 6 },
+                      { label: '行かない', value: 0 }
+                    ].map(option => (
+                      <button
+                        key={option.value}
+                        onClick={() => setTrimmingFrequency(option.value)}
+                        className={`py-2 text-[11px] font-bold rounded-lg transition-colors ${trimmingFrequency === option.value ? 'bg-white dark:bg-gray-700 shadow text-orange-600 dark:text-orange-400' : 'text-gray-500'}`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* トイレシート */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">トイレシート等消耗品 (月額)</h3>
-              <select
-                value={toiletSheetCost}
-                onChange={(e) => setToiletSheetCost(Number(e.target.value))}
-                className="w-full p-3 md:p-2 border border-gray-300 rounded-lg text-base md:text-sm bg-white"
-              >
-                <option value={1000}>節約・安いもの (1,000円/月)</option>
-                <option value={1500}>普通 (1,500円/月)</option>
-                <option value={3000}>厚手・高級 (3,000円/月)</option>
-              </select>
-            </div>
+            {/* アコーディオン: 詳細設定 */}
+            <details className="group border dark:border-gray-700 border-gray-200 rounded-2xl bg-gray-50 dark:bg-gray-800/80">
+              <summary className="p-4 cursor-pointer font-bold dark:text-gray-300 text-gray-700 list-none flex justify-between items-center select-none">
+                <span className="flex items-center gap-2">⚙️ 詳細オプションを開く (日用品・医療・初期費用等)</span>
+                <span className="transform transition-transform group-open:rotate-180 text-xl">▼</span>
+              </summary>
 
-            {/* 冷暖房費 */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2 flex justify-between">
-                <span>冷暖房費 (月額)</span>
-                <span className="text-xs text-gray-500">留守番時等のエアコン代</span>
-              </h3>
-              <select
-                value={acCost}
-                onChange={(e) => setAcCost(Number(e.target.value))}
-                className="w-full p-3 md:p-2 border border-gray-300 rounded-lg text-base md:text-sm bg-white"
-              >
-                <option value={0}>計算に含めない (0円/月)</option>
-                <option value={3000}>普通 (3,000円/月)</option>
-                <option value={6000}>24時間つけっぱなし等 (6,000円/月)</option>
-              </select>
-            </div>
+              <div className="p-4 pt-0 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 border-t dark:border-gray-700 border-gray-200 mt-2 pt-4">
 
-            {/* ペットホテル・ドッグラン */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">ペットホテル等利用 (年額)</h3>
-              <select
-                value={hotelCost}
-                onChange={(e) => setHotelCost(Number(e.target.value))}
-                className="w-full p-3 md:p-2 border border-gray-300 rounded-lg text-base md:text-sm bg-white"
-              >
-                <option value={0}>利用しない (0円/年)</option>
-                <option value={20000}>たまに利用 (20,000円/年)</option>
-                <option value={60000}>頻繁に利用 (60,000円/年)</option>
-              </select>
-            </div>
+                {/* 初期費用系 */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-[11px] font-bold text-gray-500 mb-1 flex justify-between"><span>スターターセット(初期)</span></h3>
+                    <select value={starterSetCost} onChange={(e) => setStarterSetCost(Number(e.target.value))} className="w-full p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-sm bg-white">
+                      <option value={30000}>節約・最低限 (3万)</option><option value={50000}>普通 (5万)</option><option value={100000}>高級 (10万)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <h3 className="text-[11px] font-bold text-gray-500 mb-1 flex justify-between"><span>しつけ教室 (初期)</span></h3>
+                    <select value={trainingCost} onChange={(e) => setTrainingCost(Number(e.target.value))} className="w-full p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-sm bg-white">
+                      <option value={0}>自分でやる (0円)</option><option value={50000}>プロに通う (5万)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <h3 className="text-[11px] font-bold text-gray-500 mb-1 flex justify-between"><span>去勢・避妊手術 (初期)</span></h3>
+                    <select value={hasSpayNeuter ? 1 : 0} onChange={(e) => setHasSpayNeuter(e.target.value === '1')} className="w-full p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-sm bg-white">
+                      <option value={1}>受ける (約4万)</option><option value={0}>受けない</option>
+                    </select>
+                  </div>
+                </div>
 
-            {/* 去勢・避妊手術 */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">去勢・避妊手術 (初期費用)</h3>
-              <div className="flex bg-gray-100 p-1 rounded-lg">
-                <button
-                  onClick={() => setHasSpayNeuter(true)}
-                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${hasSpayNeuter ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
-                >
-                  受ける (約40,000円)
-                </button>
-                <button
-                  onClick={() => setHasSpayNeuter(false)}
-                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${!hasSpayNeuter ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
-                >
-                  受けない
-                </button>
+                {/* 毎月・毎年の費用系 */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-[11px] font-bold text-gray-500 mb-1 flex justify-between"><span>おやつ・サプリ (月額)</span></h3>
+                    <select value={snackCost} onChange={(e) => setSnackCost(Number(e.target.value))} className="w-full p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-sm bg-white">
+                      <option value={1000}>控えめ (1,000円/月)</option><option value={3000}>普通 (3,000円/月)</option><option value={5000}>高級 (5,000円/月)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <h3 className="text-[11px] font-bold text-gray-500 mb-1 flex justify-between"><span>トイレシート等消耗品 (月額)</span></h3>
+                    <select value={toiletSheetCost} onChange={(e) => setToiletSheetCost(Number(e.target.value))} className="w-full p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-sm bg-white">
+                      <option value={1000}>節約・安い (1,000円/月)</option><option value={1500}>普通 (1,500円/月)</option><option value={3000}>厚手・高級 (3,000円/月)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <h3 className="text-[11px] font-bold text-gray-500 mb-1 flex justify-between"><span>冷暖房費(エアコン) (月額)</span></h3>
+                    <select value={acCost} onChange={(e) => setAcCost(Number(e.target.value))} className="w-full p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-sm bg-white">
+                      <option value={0}>計算に含めない</option><option value={3000}>普通 (3,000円/月)</option><option value={6000}>24Hつけっぱ (6,000円/月)</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <h3 className="text-[11px] font-bold text-gray-500 mb-1">ペットホテル (年額)</h3>
+                      <select value={hotelCost} onChange={(e) => setHotelCost(Number(e.target.value))} className="w-full p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-sm bg-white">
+                        <option value={0}>なし</option><option value={20000}>たまに</option><option value={60000}>頻繁</option>
+                      </select>
+                    </div>
+                    <div>
+                      <h3 className="text-[11px] font-bold text-gray-500 mb-1">定期健診 (年額)</h3>
+                      <select value={hasAnnualCheckup ? 1 : 0} onChange={(e) => setHasAnnualCheckup(e.target.value === '1')} className="w-full p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 border-gray-300 rounded-lg text-sm bg-white">
+                        <option value={0}>受けない</option><option value={1}>受ける (2万)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
               </div>
-            </div>
-
-            {/* 定期健診・ペットドック */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">定期健診・ペットドック (年額)</h3>
-              <div className="flex bg-gray-100 p-1 rounded-lg">
-                <button
-                  onClick={() => setHasAnnualCheckup(true)}
-                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${hasAnnualCheckup ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
-                >
-                  毎年受ける (約20,000円)
-                </button>
-                <button
-                  onClick={() => setHasAnnualCheckup(false)}
-                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${!hasAnnualCheckup ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
-                >
-                  受けない・都度
-                </button>
-              </div>
-            </div>
-
-            {/* しつけ教室 */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">プロのしつけ教室 (初期費用)</h3>
-              <div className="flex bg-gray-100 p-1 rounded-lg">
-                <button
-                  onClick={() => setTrainingCost(50000)}
-                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${trainingCost > 0 ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
-                >
-                  通う (50,000円)
-                </button>
-                <button
-                  onClick={() => setTrainingCost(0)}
-                  className={`flex-1 py-3 md:py-2 text-base md:text-sm font-medium rounded-md transition-colors ${trainingCost === 0 ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
-                >
-                  自分でやる
-                </button>
-              </div>
-            </div>
+            </details>
 
           </div>
         </section>
-
         {/* Step 4: Result */}
         <section ref={resultRef} className="dark:from-gray-800 dark:to-gray-900 bg-gradient-to-b from-white to-orange-50 p-6 rounded-3xl shadow-lg border-4 dark:border-gray-700 border-orange-300 flex flex-col gap-4 relative overflow-hidden transition-colors">
           <div className="absolute -top-10 -right-10 text-9xl opacity-5 transform rotate-12" data-html2canvas-ignore>💰</div>
@@ -1305,6 +1281,56 @@ export default function App() {
   const [isCompareMode, setIsCompareMode] = useUrlSyncedState<boolean>('isCompareMode', false);
   const [isDarkMode, setIsDarkMode] = useUrlSyncedState<boolean>('isDarkMode', false);
 
+  // 診断機能用の状態 (Global level)
+  const [showQuiz, setShowQuiz] = useState<boolean>(false);
+  const [quizAnswers, setQuizAnswers] = useState<string[]>([]);
+
+  // 診断の質問データ
+  const QUIZ_QUESTIONS = [
+    { text: "休日の過ごし方は？", options: [{ label: "アウトドア派！外でアクティブに遊ぶ", score: 'active' }, { label: "インドア派！家でのんびり過ごす", score: 'indoor' }] },
+    { text: "ブラッシングなどの毎日のお手入れは？", options: [{ label: "面倒見が良いので苦にならない", score: 'care_ok' }, { label: "なるべく手間がかからない方がいい", score: 'care_no' }] },
+    { text: "お住まいの環境は？", options: [{ label: "マンション・アパート（スペース限られる）", score: 'small' }, { label: "一戸建て（お庭があったり広い）", score: 'large' }] }
+  ];
+
+  const handleQuizAnswer = (optionScore: string) => {
+    const newAnswers = [...quizAnswers, optionScore];
+    setQuizAnswers(newAnswers);
+
+    if (newAnswers.length === QUIZ_QUESTIONS.length) {
+      // 診断結果はURL経由でAのシミュレーターに渡す（簡易的）
+      let recommendedId = 'toy-poodle'; // デフォルト
+      const isIndoor = newAnswers.includes('indoor');
+      const isCareNo = newAnswers.includes('care_no');
+      const isSmall = newAnswers.includes('small');
+
+      if (isIndoor && isCareNo && isSmall) recommendedId = 'chihuahua';
+      else if (isIndoor && !isCareNo && isSmall) recommendedId = 'shih-tzu';
+      else if (!isIndoor && !isCareNo && !isSmall) recommendedId = 'golden';
+      else if (!isIndoor && isCareNo && !isSmall) recommendedId = 'shiba';
+      else if (!isIndoor && isCareNo && isSmall) recommendedId = 'jack-russell';
+      else if (isIndoor && !isCareNo && !isSmall) recommendedId = 'bernese';
+      else if (!isIndoor && !isCareNo && isSmall) recommendedId = 'toy-poodle';
+
+      // URLを更新し、カスタムイベントを発火してSimulatorコンポーネントに通知する
+      try {
+        const key = 'selectedBreedId_A';
+        const searchParams = new URLSearchParams(window.location.search);
+        searchParams.set(key, btoa(encodeURIComponent(JSON.stringify(recommendedId))));
+        window.history.replaceState(null, '', `${window.location.pathname}?${searchParams.toString()}`);
+
+        // ローカルストレージイベントをシミュレートしてフックを再レンダリングさせる
+        window.localStorage.setItem(key, JSON.stringify(recommendedId));
+        window.dispatchEvent(new Event('storage'));
+        // 独自イベントも発火
+        window.dispatchEvent(new CustomEvent('quizResult', { detail: recommendedId }));
+      } catch (e) {}
+
+      setShowQuiz(false);
+      setQuizAnswers([]);
+      alert('あなたにピッタリの犬種が選択されました！✨');
+    }
+  };
+
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -1314,7 +1340,32 @@ export default function App() {
   }, [isDarkMode]);
 
   return (
-    <div className={`min-h-screen flex flex-col items-center font-sans ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-orange-50 text-gray-800'} transition-colors duration-300`}>
+    <div className={`min-h-screen flex flex-col items-center font-sans ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-orange-50 text-gray-800'} transition-colors duration-300 relative`}>
+      {/* モーダル表示時の背景オーバーレイ */}
+      {showQuiz && (
+        <div className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="dark:bg-gray-800 bg-white p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-md relative animate-fade-in-up border-4 dark:border-indigo-500 border-indigo-300">
+            <div className="text-center">
+              <h3 className="text-sm font-bold dark:text-indigo-300 text-indigo-700 mb-4">
+                Q{quizAnswers.length + 1}. {QUIZ_QUESTIONS[quizAnswers.length].text}
+              </h3>
+              <div className="flex flex-col gap-3 max-w-sm mx-auto">
+                {QUIZ_QUESTIONS[quizAnswers.length].options.map((opt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleQuizAnswer(opt.score)}
+                    className="bg-white dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 text-indigo-900 border-2 border-indigo-100 py-3 px-4 rounded-xl font-bold text-sm hover:bg-indigo-50 dark:hover:bg-gray-600 transition-colors shadow-sm"
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => {setShowQuiz(false); setQuizAnswers([]);}} className="mt-6 text-xs text-gray-400 underline hover:text-gray-500">やめる</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="w-full bg-gradient-to-r from-orange-400 to-pink-400 text-white p-5 shadow-md text-center rounded-b-3xl sticky top-0 z-50 relative">
         <button
           onClick={() => setIsDarkMode(!isDarkMode)}
@@ -1327,7 +1378,14 @@ export default function App() {
         <p className="text-xs font-medium mt-1 opacity-90 relative z-0">〜うちの子にどれくらいかかる？〜</p>
       </header>
 
-      <div className="w-full max-w-4xl p-4 mt-2 flex justify-end">
+      <div className="w-full max-w-4xl px-4 pt-4 flex flex-col md:flex-row justify-between items-center gap-3">
+        {/* 診断機能スタートボタン (ヘッダー直下に移動) */}
+        <button
+          onClick={() => setShowQuiz(true)}
+          className="bg-indigo-500 hover:bg-indigo-600 text-white font-extrabold py-2 px-6 rounded-full transition-transform active:scale-95 shadow-md flex items-center gap-2 text-sm w-full md:w-auto justify-center animate-pulse"
+        >
+          <span className="text-lg">✨</span> 迷ったらこれ！ワンコ相性診断
+        </button>
         <label className="flex items-center cursor-pointer bg-white px-4 py-2 rounded-full shadow-sm border-2 border-orange-200 hover:bg-orange-50 transition-colors">
           <div className="relative">
             <input type="checkbox" className="sr-only" checked={isCompareMode} onChange={() => setIsCompareMode(!isCompareMode)} />
