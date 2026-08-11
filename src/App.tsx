@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as PieTooltip, Legend, BarChart, Bar, XAxis, YAxis, Tooltip as BarTooltip, CartesianGrid } from 'recharts';
 import html2canvas from 'html2canvas';
 
-// URLとLocalStorageを同期するカスタムフック
+// URL(Base64暗号化)とLocalStorageを同期するカスタムフック
 function useUrlSyncedState<T>(key: string, initialValue: T): [T, (value: T) => void] {
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
@@ -10,7 +10,14 @@ function useUrlSyncedState<T>(key: string, initialValue: T): [T, (value: T) => v
       const searchParams = new URLSearchParams(window.location.search);
       const urlValue = searchParams.get(key);
       if (urlValue !== null) {
-        return JSON.parse(decodeURIComponent(urlValue));
+        // Base64デコード -> URIデコード -> JSONパース
+        // 古い非暗号化URLとの互換性のため、デコード失敗時は古い形式を試す
+        try {
+           const decoded = decodeURIComponent(atob(urlValue));
+           return JSON.parse(decoded);
+        } catch (e) {
+           return JSON.parse(decodeURIComponent(urlValue));
+        }
       }
       // 2. 次にLocalStorageを確認
       const item = window.localStorage.getItem(key);
@@ -23,13 +30,13 @@ function useUrlSyncedState<T>(key: string, initialValue: T): [T, (value: T) => v
 
   const setValue = (value: T) => {
     try {
-      // Stateを更新
       setStoredValue(value);
-      // LocalStorageを更新
       window.localStorage.setItem(key, JSON.stringify(value));
-      // URLパラメータを更新 (ブラウザの履歴には追加せず、URLだけ書き換える)
+
       const searchParams = new URLSearchParams(window.location.search);
-      searchParams.set(key, encodeURIComponent(JSON.stringify(value)));
+      // JSON文字化 -> URIエンコード -> Base64エンコード (難読化)
+      const encodedValue = btoa(encodeURIComponent(JSON.stringify(value)));
+      searchParams.set(key, encodedValue);
       const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
       window.history.replaceState(null, '', newUrl);
     } catch (error) {
@@ -37,12 +44,12 @@ function useUrlSyncedState<T>(key: string, initialValue: T): [T, (value: T) => v
     }
   };
 
-  // 初期ロード時にURLに反映されていない場合は反映する
   useEffect(() => {
     try {
       const searchParams = new URLSearchParams(window.location.search);
       if (!searchParams.has(key)) {
-        searchParams.set(key, encodeURIComponent(JSON.stringify(storedValue)));
+        const encodedValue = btoa(encodeURIComponent(JSON.stringify(storedValue)));
+        searchParams.set(key, encodedValue);
         const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
         window.history.replaceState(null, '', newUrl);
       }
@@ -574,7 +581,50 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
   const [hasSpayNeuter, setHasSpayNeuter] = useUrlSyncedState<boolean>(`hasSpayNeuter_${idSuffix}`, true);
   const [hasAnnualCheckup, setHasAnnualCheckup] = useUrlSyncedState<boolean>(`hasAnnualCheckup_${idSuffix}`, false);
 
+  // 診断機能用の状態
+  const [showQuiz, setShowQuiz] = useState<boolean>(false);
+  const [quizAnswers, setQuizAnswers] = useState<string[]>([]);
   const resultRef = useRef<HTMLElement>(null);
+  const settingsRef = useRef<HTMLElement>(null);
+
+  // 診断の質問データ
+  const QUIZ_QUESTIONS = [
+    { text: "休日の過ごし方は？", options: [{ label: "アウトドア派！外でアクティブに遊ぶ", score: 'active' }, { label: "インドア派！家でのんびり過ごす", score: 'indoor' }] },
+    { text: "ブラッシングなどの毎日のお手入れは？", options: [{ label: "面倒見が良いので苦にならない", score: 'care_ok' }, { label: "なるべく手間がかからない方がいい", score: 'care_no' }] },
+    { text: "お住まいの環境は？", options: [{ label: "マンション・アパート（スペース限られる）", score: 'small' }, { label: "一戸建て（お庭があったり広い）", score: 'large' }] }
+  ];
+
+  const handleQuizAnswer = (optionScore: string) => {
+    const newAnswers = [...quizAnswers, optionScore];
+    setQuizAnswers(newAnswers);
+
+    if (newAnswers.length === QUIZ_QUESTIONS.length) {
+      // 診断ロジック（簡易版）
+      let recommendedId = 'toy-poodle'; // デフォルト
+
+      const isIndoor = newAnswers.includes('indoor');
+      const isCareNo = newAnswers.includes('care_no');
+      const isSmall = newAnswers.includes('small');
+
+      if (isIndoor && isCareNo && isSmall) recommendedId = 'chihuahua';
+      else if (isIndoor && !isCareNo && isSmall) recommendedId = 'shih-tzu';
+      else if (!isIndoor && !isCareNo && !isSmall) recommendedId = 'golden';
+      else if (!isIndoor && isCareNo && !isSmall) recommendedId = 'shiba';
+      else if (!isIndoor && isCareNo && isSmall) recommendedId = 'jack-russell';
+      else if (isIndoor && !isCareNo && !isSmall) recommendedId = 'bernese';
+      else if (!isIndoor && !isCareNo && isSmall) recommendedId = 'toy-poodle';
+
+      setSelectedBreedId(recommendedId);
+      setShowQuiz(false);
+      setQuizAnswers([]);
+
+      // 設定エリアへスクロール
+      setTimeout(() => {
+        settingsRef.current?.scrollIntoView({ behavior: 'smooth' });
+        alert('あなたにピッタリの犬種が選択されました！✨');
+      }, 500);
+    }
+  };
 
   const handleDownloadImage = async () => {
     if (!resultRef.current) return;
@@ -668,7 +718,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
   ];
 
   const formatCurrency = (num: number) => {
-    return new Intl.NumberFormat('ja-JP').format(num) + '円';
+    return new Intl.NumberFormat('ja-JP').format(Math.floor(num)) + '円';
   };
 
   const filteredBreeds = DOG_BREEDS.filter((b) => {
@@ -679,8 +729,43 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
 
   return (
     <div className="w-full flex flex-col gap-6">
+
+      {/* お楽しみ機能: わんこ診断 */}
+      <section className="dark:bg-indigo-900/30 bg-indigo-50 p-5 rounded-3xl shadow-sm border-2 dark:border-indigo-800 border-indigo-200 transition-colors">
+        {!showQuiz ? (
+          <div className="text-center">
+            <h2 className="text-lg font-black dark:text-indigo-300 text-indigo-700 mb-2">🐾 迷ったらこれ！ワンコ相性診断 🐾</h2>
+            <p className="text-xs dark:text-indigo-200/80 text-indigo-600/80 font-bold mb-4">3つの質問に答えて、あなたにピッタリの犬種を見つけよう！</p>
+            <button
+              onClick={() => setShowQuiz(true)}
+              className="bg-indigo-500 hover:bg-indigo-600 text-white font-extrabold py-2 px-6 rounded-full transition-transform active:scale-95 shadow-md"
+            >
+              診断をスタート！
+            </button>
+          </div>
+        ) : (
+          <div className="text-center">
+            <h3 className="text-sm font-bold dark:text-indigo-300 text-indigo-700 mb-4">
+              Q{quizAnswers.length + 1}. {QUIZ_QUESTIONS[quizAnswers.length].text}
+            </h3>
+            <div className="flex flex-col gap-3 max-w-sm mx-auto">
+              {QUIZ_QUESTIONS[quizAnswers.length].options.map((opt, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleQuizAnswer(opt.score)}
+                  className="bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 text-indigo-900 border-2 border-indigo-100 py-3 px-4 rounded-xl font-bold text-sm hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => {setShowQuiz(false); setQuizAnswers([]);}} className="mt-4 text-[10px] text-gray-400 underline">やめる</button>
+          </div>
+        )}
+      </section>
+
       {/* Step 1: Breed Selection */}
-        <section className="dark:bg-gray-800 bg-white p-5 rounded-3xl shadow-sm border-2 dark:border-gray-700 border-orange-100 transition-colors">
+        <section ref={settingsRef} className="dark:bg-gray-800 bg-white p-5 rounded-3xl shadow-sm border-2 dark:border-gray-700 border-orange-100 transition-colors">
           <h2 className="text-lg font-bold mb-3 flex items-center gap-2 dark:text-orange-400 text-orange-600">
             <span className="text-2xl">🔍</span> 1. 犬種をえらぶ
           </h2>
