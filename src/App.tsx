@@ -782,7 +782,7 @@ function Simulator({ idSuffix, defaultBreedId }: { idSuffix: string, defaultBree
                           <div className="flex items-start gap-3">
                             <input
                               type="radio"
-                              name="breed"
+                              name={`breed_${idSuffix}`}
                               value={b.id}
                               checked={selectedBreedId === b.id}
                               onChange={(e) => setSelectedBreedId(e.target.value)}
